@@ -21,7 +21,7 @@ if (retention && (!Number.isFinite(retention.maxAgeDays) || retention.maxAgeDays
 }
 const dashboard = new DashboardServer(port, {
     host: process.env.DASHBOARD_HOST ?? '127.0.0.1', allowedHosts: process.env.DASHBOARD_ALLOWED_HOSTS?.split(',').map(host => host.trim()), directory: process.env.GAME_DIRECTORY,
-    retention, cli: process.env.BATTLESNAKE_CLI ?? (existsSync(localCli) ? localCli : 'battlesnake'), snakes,
+    evaluationDirectory: process.env.EVALUATION_DIRECTORY, retention, cli: process.env.BATTLESNAKE_CLI ?? (existsSync(localCli) ? localCli : 'battlesnake'), snakes,
 });
 let closing = false;
 async function close() { if (closing) return; closing = true; await dashboard.close(); }

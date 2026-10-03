@@ -75,6 +75,8 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 - [x] Add scoring-boundary, flood-fill caching, tail growth, and head-collision regression checks alongside their fixes.
 - [x] Verify simultaneous games do not share strategy state or overwrite recordings.
 - [x] Run seeded CLI matches and measure move latency for each strategy.
+- [x] Add a local automatic duel league with Elo rankings, latency statistics, saved reports, and dashboard ranking display.
+- [x] Chart evaluation history with per-snake statistics and filters for comparable run settings.
 - [ ] Add CI for clean installation, typechecking, linting, tests, and building.
 - [x] Rewrite the README with prerequisites, setup, snake selection, ports, match commands, debugging, and deployment instructions.
 - [x] Document standard games as the initial supported target.
@@ -130,3 +132,11 @@ Validation: 43 automated checks pass; build and typecheck pass; lint has zero er
 Disabled successful HTTP request logging in production; HTTP failures and strategy exceptions remain logged, with `REQUEST_LOGS=true` available for diagnostics. Production dashboards prune recordings at startup, every five minutes, and after matches end or stop. Keep recordings for seven days and target at most 1 GiB, deleting the oldest completed recordings first and skipping active CLI files. Running matches stop if their recording exceeds 100 MiB. Development retention remains opt-in.
 
 Validation: 49 automated checks pass, including expiry, size pressure, snapshot modification times, symlink handling, active-match protection, oversized writer shutdown, and production logging. Build passes; lint has zero errors and 28 existing warnings. Deployed the update and restarted only the Battlesnake services. Server smoke checks verified completed matches, expiry of a deliberately aged fixture, preservation of existing replays, silent successful requests, and retained HTTP error logs. Other service processes and global logging settings were left in place.
+
+## Local automatic evaluation
+
+Added `npm run evaluate`: automatically starts selected registered snakes on temporary local ports, schedules seeded standard duels in both player orders, and calculates Elo from completed wins/draws/losses. Each run starts at 1500 with K=32; parallel results are rated in schedule order. Failures, incomplete games and wall-clock limits are excluded. Reports include match outcomes, latency statistics, options, source revision and engine fingerprint. An interactive standalone HTML report and the dashboard Rankings tab display the results. Keep the newest 20 reports, discard replays by default, and save partial results on cancellation without replacing the latest completed ranking.
+
+Validation: 57 automated checks pass, covering ratings, scheduling, engine failures/draws, timeout/cancellation, report publication/retention, and dashboard access. All 90 duels across ten snakes completed in approximately 25 seconds with Rules CLI v1.2.3, without engine failures. Chrome checks passed for report sorting/filtering/download, dashboard rankings and pairings, returning to Play, and a 390 px layout. This is a small stochastic duel sample, not a definitive strategy ranking or alternate-map validation.
+
+Added history charts to the Rankings tab for final Elo, win rate, draw-adjusted score, move latency and failure rate. Charts use retained completed reports, default to matching evaluation settings, allow filtering by snake, expose point details and raw values, and leave gaps for missing measurements. Validation: 62 automated checks pass; lint has no errors and 28 existing warnings. Chrome verified four saved runs, setting/snake/metric filters, point details, mobile layout, and empty/single/mixed-settings states. A further 90 real duels completed without engine failures.

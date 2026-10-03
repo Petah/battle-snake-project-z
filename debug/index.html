@@ -9,7 +9,7 @@
 <header class="masthead"><a class="brand" href="/"><span class="brand-mark">Z</span><span>PROJECT Z<small>LOCAL ARENA</small></span></a><span class="environment"><i></i> LOCAL DEVELOPMENT</span></header>
 <main class="layout">
 <aside class="sidebar">
-<nav class="tabs" aria-label="Workspace"><button id="play-tab" class="active" type="button">Play</button><button id="recordings-tab" type="button">Recordings</button></nav>
+<nav class="tabs" aria-label="Workspace"><button id="play-tab" class="active" type="button">Play</button><button id="recordings-tab" type="button">Recordings</button><button id="rankings-tab" type="button">Rankings</button></nav>
 <section id="play-panel">
 <div class="section-heading"><h2>Set up a match</h2><span>01 / CONFIGURE</span></div>
 <form id="match-form">
@@ -26,8 +26,9 @@
 <section id="recordings-panel" hidden>
 <div class="section-heading"><h2>Saved recordings</h2><button id="refresh-recordings" class="text-button" type="button">Refresh</button></div><p class="hint">Local matches and snake recordings, including legacy games.</p><label class="search-label"><span class="sr-only">Search recordings</span><input id="recording-search" type="search" placeholder="Find a recording…"></label><div id="recordings" class="item-list"></div>
 </section>
+<section id="evaluation-panel" hidden><div class="section-heading"><h2>Evaluate your snakes</h2></div><p class="hint">Run a local league in another terminal. Snake servers start automatically.</p><pre class="run-command">npm run evaluate</pre><p class="hint">For a quick comparison:</p><pre class="run-command">npm run evaluate -- --snakes ProjectZ,Rando,Tak</pre><button id="refresh-rankings" class="secondary full" type="button">Refresh rankings</button><p class="hint">Seeded duels, both player orders, Elo ratings and latency statistics.</p></section>
 </aside>
-<section class="workspace">
+<section id="game-workspace" class="workspace">
 <div id="notice" class="notice" role="status" hidden></div>
 <div class="view-heading"><div><p class="eyebrow">02 / WATCH & INSPECT</p><h1 id="view-title">Ready when you are.</h1><p id="view-subtitle">Choose your snakes and start a match, or open a saved recording.</p></div><span id="view-status" class="status">IDLE</span></div>
 <div class="board-panel">
@@ -38,6 +39,18 @@
 <div class="detail-grid"><section class="detail-panel"><div class="section-heading"><h3>On the board</h3><span id="survivors">—</span></div><div id="snake-stats"><p class="empty-note">Health and length update each turn.</p></div></section><section class="detail-panel"><div class="section-heading"><h3>Move details</h3><button id="delete-recording" class="text-button destructive" type="button" hidden>Delete recording</button></div><pre id="move-log">No move selected.</pre></section></div>
 <footer>PROJECT Z <span>STANDARD GAMES · API V1</span></footer>
 </section>
+<section id="rankings-workspace" class="workspace" hidden>
+<div class="view-heading"><div><p class="eyebrow">COMPARE & IMPROVE</p><h1>Local snake rankings</h1><p id="evaluation-summary">Run an evaluation to compare strategies.</p></div><span class="status">ELO</span></div><p id="evaluation-meta" class="hint"></p>
+<section class="history-section" aria-labelledby="history-heading">
+<div class="section-heading"><h2 id="history-heading">Progress across runs</h2></div>
+<div class="fields"><label>Statistic<select id="history-metric"></select></label><label>Snake<select id="history-snake"><option value="">All snakes</option></select></label></div>
+<label class="check-row"><input type="checkbox" id="history-compatible" checked> Match the latest run’s opponents, seeds and settings</label>
+<p id="history-message" class="hint" role="status">Loading history…</p>
+<div id="history-chart" class="history-chart"></div><div id="history-legend" class="history-legend"></div>
+<p id="history-detail" class="hint" aria-live="polite"></p>
+<p class="hint">Elo resets to 1500 for each run. Lines compare each run’s final rating, not cumulative Elo. Random strategy choices and changes in opponents’ code can affect results even with matching settings. Latency also depends on the machine and its load. Missing measurements appear as gaps. Cancelled runs are excluded; history covers the newest 20 retained reports.</p>
+<details><summary>Compared runs and values</summary><div class="ranking-scroll"><table class="ranking-table history-table"><thead><tr><th>Run</th><th>Revision</th><th>Rated duels</th><th>Settings / opponents</th><th id="history-value-heading">Elo</th></tr></thead><tbody id="history-runs"></tbody></table></div></details>
+</section><div class="ranking-scroll"><table class="ranking-table"><thead><tr><th>Snake</th><th>Elo</th><th>Games</th><th>W / D / L</th><th>Score</th><th>P95 ms</th><th>Failed</th></tr></thead><tbody id="evaluation-rankings"></tbody></table></div><p class="hint">Each run starts at Elo 1500 with K=32. Ratings are provisional with fewer than 20 games. Failed or unfinished matches are excluded. Compare runs with the same opponents, board and seeds.</p><div class="section-heading"><h2>Results by pairing</h2></div><div class="ranking-scroll"><table class="ranking-table"><thead><tr><th>Players</th><th>Games</th><th>First wins</th><th>Draws</th><th>Second wins</th><th>Failed</th></tr></thead><tbody id="evaluation-pairings"></tbody></table></div></section>
 </main>
 </body>
 </html>

@@ -24,3 +24,6 @@ games/**/*.jsonl
 # Local Battlesnake CLI and generated browser output
 /battlesnake
 /public/
+
+# Local evaluation reports and optional replays
+/evaluations/

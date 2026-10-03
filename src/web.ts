@@ -1,5 +1,7 @@
 import type { MatchOptions, MatchState, Recording, Replay, ReplayFrame, SnakeEndpoint } from './shared/dashboard';
 import { renderBoard, snakeColor } from './web/board';
+import type { EvaluationReport } from './evaluation/types';
+import { EvaluationHistoryView } from './evaluationHistoryView';
 import { SocketMonitor } from './web/SocketMonitor';
 
 const element = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -150,9 +152,36 @@ async function watch(id: string) {
     stream.onmessage = event => { if (generation === viewGeneration) { notice(); showMatch(JSON.parse(event.data)); } };
     stream.onerror = () => { if (generation === viewGeneration) notice('Live updates disconnected. Reconnecting…'); };
 }
-function tab(name: 'play' | 'recordings') {
-    element('play-panel').hidden = name !== 'play'; element('recordings-panel').hidden = name !== 'recordings';
-    button('play-tab').classList.toggle('active', name === 'play'); button('recordings-tab').classList.toggle('active', name === 'recordings');
+let evaluationHistoryView: EvaluationHistoryView;
+async function refreshRankings() {
+    evaluationHistoryView ??= new EvaluationHistoryView();
+    await evaluationHistoryView.refresh();
+    let report: EvaluationReport;
+    try { report = await api<EvaluationReport>('/api/evaluation/latest'); }
+    catch (error) { element('evaluation-summary').textContent = error.message; return; }
+    element('evaluation-summary').textContent = `${report.rated}/${report.scheduled} rated duels · ${report.options.width} × ${report.options.height} · ${report.options.rounds} seed round(s)`;
+    element('evaluation-meta').textContent = `Revision ${report.revision} · ${new Date(report.finished).toLocaleString()}`;
+    const rows = element('evaluation-rankings'); rows.replaceChildren();
+    const row = (list: HTMLElement, values: unknown[]) => {
+        const tr = document.createElement('tr'); for (const value of values) { const td = document.createElement('td'); td.textContent = String(value); tr.append(td); } list.append(tr);
+    };
+    for (const r of report.rankings) row(rows, [r.name + (r.games < 20 ? ' *' : ''), r.elo.toFixed(1), r.games, `${r.wins} / ${r.draws} / ${r.losses}`, r.games ? `${(100 * (r.wins + r.draws / 2) / r.games).toFixed(1)}%` : '—', r.moveCount ? r.p95Ms : '—', r.failed]);
+    const pairings = new Map<string, { players: string[]; games: number; wins: number[]; draws: number; failed: number }>();
+    for (const match of report.matches) {
+        const players = [...match.players].sort(); const key = JSON.stringify(players);
+        if (!pairings.has(key)) pairings.set(key, { players, games: 0, wins: [0, 0], draws: 0, failed: 0 });
+        const pair = pairings.get(key);
+        if (match.status !== 'rated') pair.failed++;
+        else { pair.games++; if (match.draw) pair.draws++; else pair.wins[players.indexOf(match.winner)]++; }
+    }
+    const pairs = element('evaluation-pairings'); pairs.replaceChildren();
+    for (const pair of pairings.values()) row(pairs, [pair.players.join(' vs '), pair.games, pair.wins[0], pair.draws, pair.wins[1], pair.failed]);
+}
+function tab(name: 'play' | 'recordings' | 'rankings') {
+    element('play-panel').hidden = name !== 'play'; element('recordings-panel').hidden = name !== 'recordings'; element('evaluation-panel').hidden = name !== 'rankings';
+    element('game-workspace').hidden = name === 'rankings'; element('rankings-workspace').hidden = name !== 'rankings';
+    for (const key of ['play', 'recordings', 'rankings']) button(`${key}-tab`).classList.toggle('active', name === key);
+    if (name === 'rankings') { stopPlayback(); handle(refreshRankings); }
 }
 
 async function initialize() {
@@ -176,6 +205,7 @@ async function initialize() {
         });
     };
     button('add-snake').onclick = () => { snakes.push({ name: `Snake ${snakes.length + 1}`, url: 'http://localhost:9011', selected: true }); renderPlayers(); persist(); reconnect(); };
+    button('rankings-tab').onclick = () => tab('rankings'); button('refresh-rankings').onclick = () => handle(refreshRankings);
     button('play-tab').onclick = () => tab('play'); button('recordings-tab').onclick = () => { tab('recordings'); handle(refreshRecordings); };
     button('refresh-recordings').onclick = () => handle(refreshRecordings); button('refresh-matches').onclick = () => handle(refreshMatches); input('recording-search').oninput = renderRecordings;
     input('monitor').onchange = reconnect;

@@ -1,6 +1,8 @@
 import express from 'express';
 import * as http from 'node:http';
 import * as path from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { evaluationHistory } from '../evaluation/history';
 import { defaultSnakes, SnakeEndpoint } from '../shared/dashboard';
 import { StrategyRequest } from '../types/BTData';
 import { weight, WeightOptions } from '../lib/weight';
@@ -8,7 +10,7 @@ import { RecordingStore, DashboardError, RecordingRetention } from './RecordingS
 import { MatchManager } from './MatchManager';
 
 export interface DashboardOptions {
-    host?: string; directory?: string; cli?: string; snakes?: SnakeEndpoint[]; turnDuration?: number; allowedHosts?: string[]; retention?: RecordingRetention;
+    host?: string; directory?: string; cli?: string; snakes?: SnakeEndpoint[]; turnDuration?: number; allowedHosts?: string[]; retention?: RecordingRetention; evaluationDirectory?: string;
 }
 export class DashboardServer {
     readonly httpServer: http.Server;
@@ -46,6 +48,18 @@ export class DashboardServer {
             next();
         });
         app.use(express.json({ limit: '64kb' }));
+        app.get('/api/evaluation/history', async (_request, response) => {
+            response.json(await evaluationHistory(path.resolve(options.evaluationDirectory ?? path.join(__dirname, '../../evaluations'))));
+        });
+        app.get('/api/evaluation/latest', async (_request, response) => {
+            try {
+                const file = path.join(path.resolve(options.evaluationDirectory ?? path.join(__dirname, '../../evaluations')), 'latest.json');
+                response.json(JSON.parse(await readFile(file, 'utf8')));
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new DashboardError('No evaluation yet. Run npm run evaluate to create rankings.', 404);
+                throw error;
+            }
+        });
         app.get('/api/config', async (_request, response) => response.json({ snakes: options.snakes ?? defaultSnakes, cliAvailable: await this.matches.available() }));
         app.get('/api/recordings', async (_request, response) => response.json(await this.recordings.list()));
         app.get('/api/recordings/:id', async (request, response) => response.json(await this.recordings.read(request.params.id)));
