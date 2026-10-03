@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture, snake, require } from './helpers.mjs';
-const { sentinelBoard, sentinelStep, sentinelMove } = require('../dist/lib/sentinel.js');
+const { sentinelBoard, sentinelStep, sentinelMove, sentinelClearance, sentinelDistances } = require('../dist/lib/sentinel.js');
 const { isFree, isHeadThreat } = require('../dist/lib/isFree.js');
 const { nextPosition } = require('../dist/lib/directions.js');
 function board(you, enemies = [], food = []) {
@@ -74,4 +74,24 @@ test('Sentinel uses its bounded multi-snake heuristic without mutating other sna
     const original = structuredClone(data), result = sentinelMove(data);
     assert.equal(result.depth, 0); const p = nextPosition(data.you.head, result.move);
     assert.ok(isFree(data, p.x, p.y)); assert.deepEqual(data, original);
+});
+
+test('Sentinel releases unique and stacked tails at their actual turns, without a second growth delay', () => {
+    const you = snake('you', body([[2, 2], [2, 1], [1, 1], [1, 2]]));
+    let state = sentinelBoard(board(you));
+    assert.equal(sentinelClearance(state)[1 + 2 * 7], 1);
+    assert.equal(sentinelDistances(state, state.snakes[0])[1 + 2 * 7], 1);
+    you.body.push({ x: 1, y: 2 }); you.length++;
+    state = sentinelBoard(board(you));
+    assert.equal(sentinelClearance(state)[1 + 2 * 7], 2);
+    // Reaching the stacked cell immediately is forbidden; a longer route can
+    // reach it after its last occupying segment has actually vacated.
+    assert.ok(sentinelDistances(state, state.snakes[0])[1 + 2 * 7] > 1);
+});
+
+test('Sentinel spends no search budget on a forced safe move', () => {
+    const you = snake('you', body([[0, 0], [0, 1], [1, 1], [2, 1]]));
+    const data = board(you, [snake('enemy', body([[6, 6], [6, 5], [6, 4]]))]);
+    const result = sentinelMove(data);
+    assert.equal(result.move, 'right'); assert.equal(result.nodes, 0);
 });

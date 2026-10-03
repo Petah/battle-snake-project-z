@@ -47,7 +47,9 @@ Names are case insensitive; `SNAKE` also accepts an original port number. Settin
 
 ## Sentinel
 
-Sentinel is a teal strategy on port **9011**, designed for standard boards. It combines reachable-space checks, shortest-path territory estimates, and food urgency based on health and relative length. In duels it performs iterative maximin search up to three simultaneous turns: each candidate is judged against the opponent's strongest reply. Only a fully completed search depth replaces the previous choice. The search budget is capped at 25 ms or one eighth of the request timeout; normal request parsing and initial scoring add a little overhead.
+Sentinel is a teal strategy on port **9011**, designed for standard boards. It combines reachable-space checks that account for moving tails, shortest-path territory estimates, and food urgency based on health and relative length. In duels it performs iterative maximin search up to sixteen simultaneous turns: each candidate is judged against the opponent's strongest reply. Alpha-beta pruning, previous-iteration move ordering and a per-request transposition table reuse work; only a fully completed depth replaces the previous choice. Forced moves return without searching. The search budget is capped at 75 ms and scales down to 20% of the request timeout minus 15 ms (minimum 1 ms); normal request parsing and initial scoring add overhead.
+
+Space estimates account for the exact release time of each current body segment, including duplicated tails. They remain optimistic estimates: future head paths and eating can change the available space. Search resolves the known simultaneous moves and food effects. Food and length advantages take priority over speculative territorial gains, and an opponent's mobility matters when Sentinel can safely pressure it.
 
 The local simulator models movement, vacating/stacked tails, food growth, starvation, known hazard damage, body collisions and head-to-head outcomes using the [official standard rules](https://github.com/BattlesnakeOfficial/rules/blob/main/standard.go). It does not predict new food spawns. Boards with more than two snakes use the space/food/territory heuristic and immediate head-threat avoidance, without joint-move search. Wrapped, squad and other alternate rulesets are not supported by this strategy.
 
@@ -56,13 +58,17 @@ SNAKE=Sentinel PORT=9011 npm run dev
 npm run evaluate -- --snakes Sentinel,ProjectZ2,Tak,Rando --rounds 5 --seed 100
 ```
 
+For head-to-head tests against Vesper, use `--snakes Sentinel,Vesper --concurrency 1 --max-seconds 300`. Long survival games need a larger wall-clock limit. Both strategies run synchronously in the evaluator's shared Node process, so reported HTTP latency includes time queued behind the other strategy's search.
+
 Sentinel is included in the default dashboard and evaluation roster. If your browser retained the previous ten-snake setup, use **+ Add snake** to add the missing registered strategy. The deployment proxy template includes `/snakes/sentinel` for future deployments.
 
-Initial local results: 16 wins in 18 duels against ProjectZ2/Tak/Rando at seeds 100–102. A separate full-roster league at seeds 1000–1002 produced **56 wins / 4 losses** for Sentinel, **1827.3 Elo**, and **10 ms p95** move latency, with no engine failures across the league's 330 games. Two four-snake smoke games at seeds 111 and 222 completed; Sentinel won one. These are local samples against the bundled strategies, not an official Arena rating or a guarantee of performance against other snakes.
+Original three-turn version results: 16 wins in 18 duels against ProjectZ2/Tak/Rando at seeds 100–102. A separate full-roster league at seeds 1000–1002 produced **56 wins / 4 losses** for Sentinel, **1827.3 Elo**, and **10 ms p95** move latency, with no engine failures across the league's 330 games. Two four-snake smoke games at seeds 111 and 222 completed; Sentinel won one. These are local samples against the bundled strategies, not an official Arena rating or a guarantee of performance against other snakes.
+
+After the Vesper upgrade, a controlled comparison used standard 11×11 duels, seeds 801–803, both player orders, 500 ms move timeouts, concurrency one, and a 300-second match limit. Original Sentinel from `013b46e` lost all six games; the revised Sentinel won three and lost three. Vesper was unchanged. All games completed without engine failures. This small sample shows progress against that opponent, not reliable dominance. The search budget increased from 25 to 75 ms; shared-process p95 HTTP latency increased from 126 to 196 ms in these runs, including the time queued behind Vesper's search.
 
 ## Vesper
 
-Vesper is an amethyst strategy on port **9012** and the strongest bundled snake in local duels. It is built around four ideas:
+Vesper is an amethyst strategy on port **9012**, which led the bundled roster in its initial local duel league. It is built around four ideas:
 
 - **Time-aware flood fill.** A body segment only blocks a cell until its owner's tail has moved past it, so corridors that open in time count as space, and a tail that stays put after eating is blocked for one extra turn. This accepts safe pockets that a static fill rejects and avoids the stacked-tail trap.
 - **Voronoi territory with pressure.** Cells are assigned to whichever head reaches them first, with ties going to the longer snake. The evaluation rewards Vesper's share, penalises the rival's share, and adds a pressure bonus when the rival has few legal moves, so a longer Vesper squeezes rather than orbits.

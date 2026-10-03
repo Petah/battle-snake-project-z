@@ -150,3 +150,11 @@ Local validation: 16/18 duel wins in development seeds 100–102 against Project
 Deployed release `2150e8f-sentinel-20261003` from the tested working tree, with a source fingerprint in its deployment manifest and the previous release/configuration retained for rollback. Added the Sentinel proxy route and persistent evaluation-history directory. Verified all eleven public metadata endpoints, Sentinel lifecycle requests, and a public HTTPS Rules CLI match: Sentinel won against ProjectZ2 at seed 77 after 179 turns, with 10 ms p95 and 16 ms maximum reported latency. Both Battlesnake services are healthy; other application process IDs were unchanged and their HTTP checks passed.
 
 Enabled `RECORD_GAMES=true` in the snake service to record future Arena games, while successful HTTP request logging remains disabled. Only the snake service restarted. A real public HTTPS game produced playable Sentinel and Rando snapshot replays (62 and 61 frames), visible in the dashboard by game ID. Existing seven-day / 1 GiB target retention covers the shared games directory; verified that an eight-day-old test recording is removed using the service account. Recording cannot recover games played before it was enabled.
+
+## Sentinel versus Vesper
+
+Upgraded Sentinel with tail-release-aware space estimates, food selection that considers opponent arrival times, and iterative alpha-beta search with cached positions and move ordering. Search now completes up to 16 turns within a 75 ms budget at the standard 500 ms timeout (previously three turns / 25 ms); forced safe moves skip search. Vesper was unchanged.
+
+Controlled standard 11x11 duels at seeds 801–803, both player orders, concurrency one and a 300-second game limit: original Sentinel lost all six; upgraded Sentinel won three and lost three. This is evidence of improvement on this sample, not dominance over Vesper. Shared-process HTTP p95 rose from 126 ms to 196 ms; those measurements include waiting behind the other snake. The upgraded version also won all four duels against ProjectZ2 and Rando at seed 909. All these games completed without engine failures.
+
+Validation: all 83 automated checks and the build pass; lint has zero errors and 28 existing warnings. Added regression coverage for tail-release timing and skipping search on forced moves. This upgrade has not been deployed.
