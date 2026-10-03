@@ -7,7 +7,7 @@ Based on the project review on 2 October 2026. Work in the order below: get one 
 - [x] Preserve existing local changes in `src/lib/smartRandomMove.ts` and `public/` before restructuring. The NN experiment was explicitly approved for removal.
 - [x] Pin Node 24 LTS and align `engines`, development setup, and Node type definitions.
 - [x] Upgrade TypeScript and replace the `files` glob in `tsconfig.json` with `include`. Use TypeScript 6.0 while typescript-eslint does not support 7.0.
-- [ ] Make `src/` the source of truth; review legacy root JavaScript and stale generated files before removing them.
+- [x] Make `src/` the source of truth; upstream removed the legacy root JavaScript entrypoints and esbuild/TypeScript generate the current outputs.
 - [x] Replace Gulp/Browserify with TypeScript compilation and esbuild for the browser bundle.
 - [x] Replace TSLint and the unused legacy ESLint configuration with ESLint/typescript-eslint. Existing unused-code warnings remain for later cleanup.
 - [x] Add `build`, `start`, `dev`, `typecheck`, and `lint` scripts.
@@ -49,7 +49,7 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 - [x] Document CLI commands that replace the legacy PHP/`engine` workflow for local games. Dashboard engine controls remain pending in section 5.
 - [x] Run one snake in a standard solo game, then a standard multiplayer match.
 - [x] Add seeded match commands for repeatable comparisons.
-- [x] Migrate and verify all nine registered snake variants.
+- [x] Migrate and verify all ten registered snake variants, including upstream LookAhead.
 - [x] Store mutable strategy state per game ID so concurrent games do not interfere.
 - [x] Key recordings by game ID and snake ID rather than snake ID alone.
 - [x] Handle missing start state, duplicate lifecycle requests, and cleanup after games.
@@ -64,8 +64,8 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 - [ ] Keep browser configuration separate from server strategy imports.
 - [ ] Make HTTP/WebSocket URLs configurable and handle disconnected clients cleanly.
 - [ ] Review recording writes, permissions, and the destructive recording-delete endpoint before exposing the dashboard.
-- [x] Retain existing legacy recordings and support their original top-left orientation in the renderer; label new recordings API v1/bottom-left. Replay links retain the actual recording filename.
-- [ ] Add automated renderer checks using legacy and API v1 recording fixtures.
+- [x] Retain existing legacy recordings and support their original top-left orientation in the renderer; label new JSON recordings and compressed per-turn snapshots API v1/bottom-left. Replay links retain the actual recording filename.
+- [x] Add automated browser-bundle checks for legacy and API v1 coordinates, hazards, body arrows, and empty selections.
 - [x] Remove the neural-network experiment, its PHP page, generated outputs, network directory, and old references, as requested.
 
 ## 6. Verify and document the upgraded project
@@ -100,3 +100,9 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 ## Review limits
 
 The initial review covered source inspection, current official documentation, a lockfile audit, a compiler configuration check, and targeted scoring checks. The dependency/build upgrade and NN removal are now complete. Verified a clean install, compilation, linting (zero errors; existing warnings), nine server startups, HTTP lifecycle/move requests, WebSocket events, and weighted pathfinding under Node 24. The API migration now passes 18 automated checks, typechecking, and linting (zero errors; 28 legacy warnings). Verified single-snake configuration, invalid configuration failures, optional WebSockets, and a solo game through turn 351. All nine strategies completed standard 11x11 matches with Rules CLI v1.2.3 at seeds 42 and 99 (final turns 292 and 142), without engine communication errors. Maximum reported move latency was 51 ms against a 500 ms timeout. This is local compatibility evidence, not comprehensive strategy or alternate-map validation. The next work is section 3 scoring, flood-fill, and collision correctness.
+
+## Upstream merge
+
+Fetched and integrated 44 previously missing commits through `27a2ffb` (`Tail stack`). Preserved the Node 24 / Express 5 / TypeScript 6 build, NN removal, API v1 validation/fallbacks, and game isolation. Adapted upstream strategy storage, state functions, squad-aware food selection, hazard weighting, LookAhead, ranking scraper, and debug viewer to the current build. Browser-safe MD5 preserves the upstream ID ordering; the scraper uses native Node fetch with current Cheerio. Both old whole-game JSON and compressed per-turn replays remain readable.
+
+Post-merge validation: 25 automated checks pass, along with typechecking, the browser build, and PHP syntax/render smoke checks. Lint has zero errors and 37 legacy unused-code warnings. The dependency audit reports zero vulnerabilities. Standard 11x11 games at seeds 42 and 99 completed with all ten snakes (final turns 164 and 184), without engine communication errors. Maximum reported latency was 274 ms against a 500 ms timeout. This replaces the earlier nine-snake match baseline above; scoring, collision, and alternate-map work remains pending.

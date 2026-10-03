@@ -3,8 +3,8 @@ import * as http from 'node:http';
 const logger = require('morgan');
 
 import { log, logs } from '../lib/log';
-import { writeFile } from '../lib/writeFile';
-import { BTData, BTRequest, SnakeAppearance } from '../types/BTData';
+import { writeFile, writeTurnFile } from '../lib/writeFile';
+import { StrategyRequest, BTRequest, SnakeAppearance } from '../types/BTData';
 import { MoveDirection } from '../types/MoveDirection';
 import { fallbackMove, isDirection } from '../lib/directions';
 import { genericErrorHandler } from './handlers';
@@ -19,9 +19,9 @@ export interface ServerMoveResponse {
 export interface Snake {
     info: { name: string; ops?: string[] };
     appearance: SnakeAppearance;
-    start: (data: BTData) => void;
-    move: (data: BTData) => { move?: unknown; shout?: string };
-    end?: (data: BTData) => void;
+    start: (data: StrategyRequest) => void;
+    move: (data: StrategyRequest) => { move?: unknown; shout?: string };
+    end?: (data: StrategyRequest) => void;
 }
 
 export interface ServerOptions {
@@ -44,6 +44,7 @@ interface GameRecording {
 
 interface GameState {
     snake: Snake;
+    storage: Record<string, any>;
     recording?: GameRecording;
 }
 
@@ -95,9 +96,11 @@ export class Server {
                 const requestData = validateRequest(request.body);
                 let game: GameState | undefined;
                 let result: { move?: unknown; shout?: string } | undefined;
+                let context: StrategyRequest | undefined;
                 try {
                     game = this.game(requestData);
-                    result = game.snake.move(this.context(requestData));
+                    context = this.context(requestData, game.storage);
+                    result = game.snake.move(context);
                 } catch (error) {
                     console.error('Strategy failed; using fallback move:', error);
                 }
@@ -106,6 +109,10 @@ export class Server {
                 };
                 if (typeof result?.shout === 'string') move.shout = result.shout.slice(0, 256);
                 log('moveResponse', move);
+                if (game?.recording && context) {
+                    context.log('moveResponse', move);
+                    this.recordTurn(game.snake, 'move', context);
+                }
                 if (game?.recording) game.recording.moves[requestData.turn] = structuredClone(requestData);
                 this.broadcast('move', game?.snake ?? this.template, requestData);
                 response.json(move);
@@ -123,8 +130,10 @@ export class Server {
                 const key = this.key(data);
                 const game = this.games.get(key);
                 try {
-                    game?.snake.end?.(this.context(data));
+                    const context = this.context(data, game?.storage);
+                    game?.snake.end?.(context);
                     if (game?.recording) {
+                        this.recordTurn(game.snake, 'end', context);
                         game.recording.end = structuredClone(data);
                         const filename = `${encodeURIComponent(data.game.id)}-${encodeURIComponent(data.you.id)}`;
                         writeFile(filename, game.recording, options.recordingDirectory);
@@ -157,8 +166,8 @@ export class Server {
         return JSON.stringify([data.game.id, data.you.id]);
     }
 
-    private context(data: BTRequest): BTData {
-        return { ...data, cache: {} };
+    private context(data: BTRequest, storage: Record<string, any> = {}): StrategyRequest {
+        return new StrategyRequest(data, storage);
     }
 
     private game(data: BTRequest): GameState {
@@ -166,9 +175,12 @@ export class Server {
         let game = this.games.get(key);
         if (!game) {
             const snake = this.createSnake();
-            snake.start(this.context(data));
-            game = { snake };
+            const storage = {};
+            const context = this.context(data, storage);
+            snake.start(context);
+            game = { snake, storage };
             if (this.options.saveGame) {
+                this.recordTurn(snake, 'start', context);
                 game.recording = {
                     apiVersion: '1', coordinateSystem: 'bottom-left', snake: snake.info.name,
                     start: structuredClone(data), moves: [],
@@ -177,6 +189,15 @@ export class Server {
             this.games.set(key, game);
         }
         return game;
+    }
+
+    private recordTurn(snake: Snake, type: 'start' | 'move' | 'end', context: StrategyRequest): void {
+        // Optional debug I/O must not prevent the engine from receiving a move.
+        try {
+            writeTurnFile(snake.info.name, type, context, this.options.recordingDirectory);
+        } catch (error) {
+            console.error('Debug recording failed:', error);
+        }
     }
 
     private broadcast(event: string, snake: Snake, data: BTRequest): void {

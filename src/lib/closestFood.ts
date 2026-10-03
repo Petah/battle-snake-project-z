@@ -1,13 +1,13 @@
 import { gridDistance } from './gridDistance';
 import { log } from './log';
-import { BTXY, BTData } from '../types/BTData';
+import { BTXY, BTRequest } from '../types/BTData';
 
 interface Closest {
     food: BTXY,
     distance: number,
 }
 
-export function closestFood(data: BTData): Closest {
+export function closestFood(data: BTRequest): Closest {
     const closest: Closest = {
         food: null,
         distance: 100000,

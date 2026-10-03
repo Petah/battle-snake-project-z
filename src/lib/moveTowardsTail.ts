@@ -1,17 +1,14 @@
 import { log } from './log';
-import { BTData } from '../types/BTData';
-import { Pather } from './Pather';
+import { BTRequest, StrategyRequest } from '../types/BTData';
+import { pathTo } from './Pather';
+import { WeightOptions } from './weight';
 
 // @todo don't move if near bigger snake
-export function moveTowardsTail(data: BTData) {
-    const pather = new Pather(data, false);
-    const path = pather.pathTo(data.you.body[data.you.body.length - 1].x, data.you.body[data.you.body.length - 1].y);
-    if (path.length) {
-        const direction = pather.pathToDirection(path);
-        if (direction) {
-            log('moveTowardsTail', direction);
-            return direction;
-        }
+export function moveTowardsTail(request: StrategyRequest, weightOptions: WeightOptions = { blockHeads: true, attackHeads: true }) {
+    const path = pathTo(request, request.body.you, request.body.you.body[request.body.you.body.length - 1].x, request.body.you.body[request.body.you.body.length - 1].y, weightOptions);
+    if (path) {
+        request.log('moveTowardsTail', path.direction);
+        return path.direction;
     }
-    log('moveTowardsEnemy', 'no options');
+    request.log('moveTowardsTail', 'no options');
 }

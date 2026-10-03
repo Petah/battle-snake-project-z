@@ -57,6 +57,28 @@ export interface BTRequest {
     you: BTSnake;
 }
 
+export type BTBoard = BTRequest['board'];
+
+// Strategy state stays separate from the incoming API object. Storage lasts for
+// one game/snake pair; caches, grid annotations, and logs last for one request.
+export class StrategyRequest {
+    public cache: Record<string, any> = {};
+    public grid: Record<string, any>[][];
+    public readonly logs: any[][] = [];
+
+    constructor(public body: BTRequest, public storage: Record<string, any> = {}) {
+        this.grid = Array.from({ length: body.board.height }, () =>
+            Array.from({ length: body.board.width }, () => ({})));
+    }
+
+    get game() { return this.body.game; }
+    get turn() { return this.body.turn; }
+    get board() { return this.body.board; }
+    get you() { return this.body.you; }
+
+    log(...args: any[]) { this.logs.push(args); }
+}
+
 export interface BTData extends BTRequest {
     cache: Record<string, any>;
     log?: string[];

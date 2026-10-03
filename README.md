@@ -1,6 +1,6 @@
 # Project Z Battlesnake AI
 
-Nine Battlesnake strategies written in TypeScript for Node.js, migrated to the current Battlesnake API v1. Standard games are the initial target: all nine strategies have completed seeded games against the official Rules CLI. Scoring and collision fixes, dashboard replacement, and alternate map support are tracked in [todo.md](todo.md).
+Ten Battlesnake strategies written in TypeScript for Node.js, migrated to the current Battlesnake API v1. Standard games are the initial target: all ten strategies have completed seeded games against the official Rules CLI. Scoring and collision fixes, dashboard replacement, and alternate map support are tracked in [todo.md](todo.md).
 
 ## Setup
 
@@ -20,7 +20,7 @@ The project uses TypeScript 6.0, the latest major supported by the current types
 npm run dev
 ```
 
-This builds the project, runs the snake servers with automatic restarts, watches TypeScript, and rebuilds the browser bundle when its source changes. With no selection configured, all nine servers run:
+This builds the project, runs the snake servers with automatic restarts, watches TypeScript, and rebuilds the browser bundle when its source changes. With no selection configured, all ten servers run:
 
 | Snake | HTTP port |
 | --- | --- |
@@ -33,6 +33,7 @@ This builds the project, runs the snake servers with automatic restarts, watches
 | Dunno | 9007 |
 | WorkItOut | 9008 |
 | ProjectZ2 | 9009 |
+| LookAhead | 9010 |
 
 Run one snake with a chosen port:
 
@@ -75,7 +76,7 @@ For deployment, install dependencies and build under Node 24, then start with `S
 
 ## API and debugging
 
-`GET /` returns API v1 appearance metadata. `/start`, `/move`, and `/end` validate current request bodies; moves always return a direction, with a fallback when a strategy throws or returns an invalid move. Each game and snake ID gets its own strategy instance. Coordinates use the bottom-left origin (`up` increases `y`).
+`GET /` returns API v1 appearance metadata. `/start`, `/move`, and `/end` validate current request bodies; moves always return a direction, with a fallback when a strategy throws or returns an invalid move. Each game and snake ID gets its own strategy instance and persistent storage; request caches, grid annotations, and logs stay separate from API input. Coordinates use the bottom-left origin (`up` increases `y`).
 
 Debugging is opt in:
 
@@ -83,6 +84,6 @@ Debugging is opt in:
 DEBUG_WEBSOCKETS=true DEBUG_LOGS=true RECORD_GAMES=true npm run dev
 ```
 
-WebSockets listen on the HTTP port plus 10000. Recordings default to `games/`; `GAME_DIRECTORY` overrides that directory. Filenames include both game and snake IDs. API v1 recordings declare their bottom-left coordinates, while the legacy renderer continues to display old recordings with their original orientation. The AngularJS/PHP dashboard runs separately and is still awaiting replacement.
+WebSockets listen on the HTTP port plus 10000. Recordings default to `games/`; `GAME_DIRECTORY` overrides that directory. Completed games have JSON filenames containing both game and snake IDs. Compressed per-turn snapshots live under `games/<game>/<snake>_<id>/` for the upstream replay viewer. API v1 recordings declare their bottom-left coordinates, while the legacy renderer continues to display old recordings with their original orientation. Run the AngularJS/PHP dashboard separately with `php -S localhost:9000` from the project root, then open `http://localhost:9000/debug/debug.php`. Its replay viewer supports compressed snapshots and older whole-game JSON files. Its engine controls still target the old engine, and the dashboard is awaiting replacement.
 
 These strategies still have known scoring, flood-fill, and collision issues. Hazard maps, wrapped boards, and other alternate rulesets need further strategy work before they are supported.

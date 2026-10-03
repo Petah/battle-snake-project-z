@@ -1,5 +1,5 @@
 
-import { BTData } from '../../types/BTData';
+import { StrategyRequest } from '../../types/BTData';
 import { Color } from '../../types/Color';
 import { HeadType } from '../../types/HeadType';
 import { TailType } from '../../types/TailType';
@@ -9,28 +9,33 @@ import { smartRandomMove } from '../../lib/smartRandomMove';
 import { moveAway } from '../../lib/moveAway';
 import { BaseSnake } from './base-snake';
 import { moveTowardsKill } from '../../lib/moveTowardsKill';
+import { lookAhead } from '../../lib/lookAhead';
+import { ISnake } from './snake-interface';
+import { ServerMoveResponse } from '../Server';
 
-export class Dunno extends BaseSnake {
-    public readonly appearance = {
-            color: Color.NEPHRITIS,
-            head: HeadType.SAND_WORM,
-            tail: TailType.ROUND_BUM,
-    };
+export class Dunno extends BaseSnake implements ISnake {
+    public port: number = 9007;
+    public color = Color.NEPHRITIS;
+    public headType = HeadType.SAND_WORM;
+    public tailType = TailType.PIXEL;
 
-    move(data: BTData) {
+    public move(request: StrategyRequest): ServerMoveResponse | null {
         let direction;
-        direction = moveTowardsFoodPf(data);
+        direction = moveTowardsFoodPf(request, {
+            blockHeads: true,
+            attackHeads: true,
+        }, true);
         if (!direction) {
-            direction = moveTowardsKill(data);
+            direction = moveAway(request);
         }
         if (!direction) {
-            direction = moveAway(data);
+            direction = lookAhead(request.body);
         }
         if (!direction) {
-            direction = smartRandomMove(data);
+            direction = smartRandomMove(request);
         }
         if (!direction) {
-            direction = randomMove(data);
+            direction = randomMove(request);
         }
         return {
             move: direction,

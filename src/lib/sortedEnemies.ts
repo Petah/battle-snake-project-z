@@ -1,12 +1,12 @@
 import { gridDistance } from './gridDistance';
-import { BTData, BTSnake } from '../types/BTData';
+import { BTRequest, BTSnake } from '../types/BTData';
 
 interface Sorted {
     snake: BTSnake,
     distance: number,
 }
 
-export function sortedEnemies(data: BTData): Sorted[] {
+export function sortedEnemies(data: BTRequest): Sorted[] {
     if (!data.board.snakes.length) {
         return [];
     }

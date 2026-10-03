@@ -14,4 +14,3 @@ declare global {
 
 window.loadGrid = window.loadGrid || loadGrid;
 window.app = window.app || app;
-console.log('web');

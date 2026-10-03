@@ -1,16 +1,23 @@
-import { BTData } from "../types/BTData";
+import { BTRequest } from "../types/BTData";
 
-export function isFree(data: BTData, x: number, y: number) {
+export function isOutOfBounds(data: BTRequest, x: number, y: number) {
     if (x < 0) {
-        return false;
+        return true;
     }
     if (y < 0) {
-        return false;
+        return true;
     }
     if (x >= data.board.width) {
-        return false;
+        return true;
     }
     if (y >= data.board.height) {
+        return true;
+    }
+    return false;
+}
+
+export function isFree(data: BTRequest, x: number, y: number) {
+    if (isOutOfBounds(data, x, y)) {
         return false;
     }
     for (const snake of data.board.snakes) {
@@ -29,4 +36,13 @@ export function isFree(data: BTData, x: number, y: number) {
         // }
     }
     return true;
+}
+
+export function isFood(data: BTRequest, x: number, y: number) {
+    for (const food of data.board.food) {
+        if (food.x == x && food.y == y) {
+            return true;
+        }
+    }
+    return false;
 }

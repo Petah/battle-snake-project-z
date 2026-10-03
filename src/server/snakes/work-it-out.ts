@@ -1,4 +1,4 @@
-import { BTData } from '../../types/BTData';
+import { StrategyRequest } from '../../types/BTData';
 import { Color } from '../../types/Color';
 import { HeadType } from '../../types/HeadType';
 import { TailType } from '../../types/TailType';
@@ -11,14 +11,13 @@ import { moveTowardsTail } from '../../lib/moveTowardsTail';
 import { BaseSnake } from './base-snake';
 
 export class WorkItOut extends BaseSnake {
-    public ops: ((data: BTData) => unknown)[] = [];
-    public readonly appearance = {
-        color: Color.BROWN,
-        head: HeadType.SAND_WORM,
-        tail: TailType.SHARP,
-    };
+    public ops: ((data: StrategyRequest) => unknown)[] = [];
+    public port = 9008;
+    public color = Color.BROWN;
+    public headType = HeadType.SMILE;
+    public tailType = TailType.SHARP;
 
-    start(_data: BTData) {
+    start(_data: StrategyRequest) {
         const options = [
             moveAway,
             moveTowardsEnemy,
@@ -40,7 +39,7 @@ export class WorkItOut extends BaseSnake {
         };
     }
 
-    move(data: BTData) {
+    move(data: StrategyRequest) {
         let direction;
         for (const op of this.ops) {
             direction = op(data);

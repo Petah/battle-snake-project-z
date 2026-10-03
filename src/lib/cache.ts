@@ -1,11 +1,8 @@
-import { BTData } from "../types/BTData";
+import { StrategyRequest } from "../types/BTData";
 
-export function cache(data: BTData, key: string, value: any) {
-    if (!data.cache) {
-        data.cache = {};
+export function cache(request: StrategyRequest, key: string, value: any) {
+    if (!request.cache[key]) {
+        request.cache[key] = value;
     }
-    if (!data.cache[key]) {
-        data.cache[key] = value;
-    }
-    return data.cache[key];
+    return request.cache[key];
 }

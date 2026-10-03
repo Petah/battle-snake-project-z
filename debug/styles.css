@@ -1,0 +1,108 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+pre {
+    margin: 0;
+}
+
+.wrapper {
+    display: flex;
+}
+
+.scroll {
+    overflow-y: scroll;
+    padding: 10px;
+}
+
+.moves {
+    flex-direction: column;
+    display: flex;
+    justify-content: flex-end;
+    white-space: nowrap;
+}
+
+.moves {
+    flex-direction: column-reverse;
+}
+
+.game,
+.move {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.grid {
+    width: 800px;
+    height: 800px;
+    display: flex;
+    flex-direction: column;
+}
+
+.grid-row {
+    display: flex;
+    flex: 1;
+}
+
+.grid-col {
+    border: 1px solid #bbb;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.grid-row:last-child .grid-col {
+    border-bottom: 1px dashed #bbb;
+}
+
+.grid-col:last-child {
+    border-right: 1px dashed #bbb;
+}
+
+.food {
+    background: #3498db;
+    width: 25px;
+    height: 25px;
+    border-radius: 25px;
+    margin: 1px;
+}
+
+.path {
+    background: #e67e22;
+    width: 25px;
+    height: 25px;
+    margin: 1px;
+}
+
+.snake {
+    flex: 1;
+    width: 100%;
+    border: 1px solid #eee;
+    text-align: center;
+    font-size: 22px;
+    line-height: 4;
+    color: #fff;
+}
+
+.weight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    text-align: center;
+    font-size: 10px;
+}

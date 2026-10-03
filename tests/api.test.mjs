@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { require, fixture, startServer } from './helpers.mjs';
@@ -44,7 +45,7 @@ class CounterSnake extends BaseSnake {
     start() { this.starts++; }
     move(data) {
         assert.deepEqual(data.cache, {});
-        assert.equal(data.log, undefined);
+        assert.deepEqual(data.logs, []);
         data.cache.used = true;
         return { move: ++this.count === 1 ? 'up' : 'right', shout: String(this.starts) };
     }
@@ -134,7 +135,7 @@ test('records concurrent games under distinct safe filenames without internal ca
         await request('/move', data);
         await request('/end', data);
     }
-    const files = await readdir(directory);
+    const files = (await readdir(directory)).filter(name => name.endsWith('.json'));
     assert.equal(files.length, 2);
     for (const file of files) {
         const recording = JSON.parse(await readFile(join(directory, file), 'utf8'));
@@ -144,5 +145,38 @@ test('records concurrent games under distinct safe filenames without internal ca
         assert.equal(recording.start.log, undefined);
         assert.equal(recording.moves[0].cache, undefined);
         assert.equal(recording.end.cache, undefined);
+        const gameFolder = encodeURIComponent(recording.start.game.id).replace(/\./g, '%2E');
+        const snakeFolder = 'CounterSnake_' + encodeURIComponent(recording.start.you.id);
+        const snapshotDirectory = join(directory, gameFolder, snakeFolder);
+        assert.deepEqual((await readdir(snapshotDirectory)).sort(), ['0000_start.json.gz', '0001_move.json.gz', '9999_end.json.gz']);
+        const snapshot = JSON.parse(gunzipSync(await readFile(join(snapshotDirectory, '0001_move.json.gz'))));
+        assert.equal(snapshot.coordinateSystem, 'bottom-left');
+        assert.equal(snapshot.body.game.id, recording.start.game.id);
+        assert.equal(snapshot.cache, undefined);
+        assert.deepEqual(snapshot.storage, {});
+        assert.equal(snapshot.grid.length, 3);
+        assert.ok(snapshot.logs.some(entry => entry[0] === 'moveResponse'));
+
     }
+});
+
+test('upstream strategy storage persists per game and snake while request caches reset', async t => {
+    class StorageSnake extends BaseSnake {
+        start(request) { request.storage.moves = 0; }
+        move(request) {
+            assert.deepEqual(request.cache, {});
+            request.cache.previous = true;
+            return { move: 'up', shout: String(++request.storage.moves) };
+        }
+    }
+    const request = await startServer(t, () => new StorageSnake());
+    const a = fixture('a');
+    const b = { ...fixture('b'), storage: { moves: 99 }, logs: ['injected'], grid: [] };
+    assert.equal((await request('/move', a)).body.shout, '1');
+    assert.equal((await request('/move', a)).body.shout, '2');
+    assert.equal((await request('/move', b)).body.shout, '1');
+    await request('/start', a);
+    assert.equal((await request('/move', a)).body.shout, '3');
+    await request('/end', a);
+    assert.equal((await request('/move', a)).body.shout, '1');
 });

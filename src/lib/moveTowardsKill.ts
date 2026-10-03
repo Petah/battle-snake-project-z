@@ -1,38 +1,40 @@
 import { log } from './log';
-import { BTData } from '../types/BTData';
-import { Pather } from './Pather';
+import { BTRequest, StrategyRequest } from '../types/BTData';
+import { pathTo } from './Pather';
+import { MoveDirection } from '../types/MoveDirection';
 
-export function moveTowardsKill(data: BTData) {
-    const pather = new Pather(data, false);
+export function moveTowardsKill(request: StrategyRequest): MoveDirection {
     const closest = {
         snake: null,
         path: null,
     };
-    for (const snake of data.board.snakes) {
-        if (snake.id == data.you.id) {
+    for (const snake of request.body.board.snakes) {
+        if (snake.id == request.body.you.id) {
             continue;
         }
-        if (snake.body.length >= data.you.body.length) {
+        if (snake.body.length >= request.body.you.body.length) {
             continue;
         }
-        const path = pather.pathTo(snake.body[0].x, snake.body[0].y);
-        if (path.length && path.length <= 3) {
-            if (!closest.path || path.length < closest.path.length) {
+        const path = pathTo(request, request.body.you, snake.body[0].x, snake.body[0].y, {
+            blockHeads: false,
+            attackHeads: true,
+        });
+        if (path && path.distance <= 3) {
+            if (!closest.path || path.distance < closest.path.distance) {
                 closest.snake = snake;
                 closest.path = path;
             }
         }
     }
     if (closest.path) {
-        const direction = pather.pathToDirection(closest.path);
-        if (direction) {
-            log('moveTowardsKill', direction);
-            return direction;
+        if (closest.path.direction) {
+            request.log('moveTowardsKill', closest.path.direction);
+            return closest.path.direction;
         } else {
-            log('moveTowardsKill', 'no direction');
+            request.log('moveTowardsKill', 'no direction');
         }
     } else {
-        log('moveTowardsKill', 'no closest');
+        request.log('moveTowardsKill', 'no closest');
     }
-    log('moveTowardsKill', 'no options');
+    request.log('moveTowardsKill', 'no options');
 }

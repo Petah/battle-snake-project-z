@@ -1,10 +1,10 @@
 import { isFree } from './isFree';
 import { log } from './log';
-import { BTData } from '../types/BTData';
+import { StrategyRequest } from '../types/BTData';
 import { directions, nextPosition } from './directions';
 import { shuffle } from './shuffle';
 
-export function randomMove(data: BTData) {
+export function randomMove(data: StrategyRequest) {
     const options = [...directions];
     shuffle(options);
     for (const direction of options) {

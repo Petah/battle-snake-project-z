@@ -13,4 +13,13 @@ npm-debug.log
 debug/bundle.js
 debug/bundle.js.map
 dist/**/*.js
+dist/**/*.js.map
 engine
+engine2
+games/**/*.json.gz
+games/**/*.json
+/env.json
+
+# Local Battlesnake CLI and generated browser output
+/battlesnake
+/public/

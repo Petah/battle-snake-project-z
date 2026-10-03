@@ -2,11 +2,11 @@ import { shuffle } from './shuffle';
 import { gridDistance } from './gridDistance';
 import { isFree } from './isFree';
 import { log } from './log';
-import { BTData } from '../types/BTData';
+import { BTRequest } from '../types/BTData';
 import { closestFood } from './closestFood';
 import { directions, nextPosition } from './directions';
 
-export function moveTowardsFood(data: BTData) {
+export function moveTowardsFood(data: BTRequest) {
     const closest = closestFood(data);
     if (!closest) {
         log('moveTowardsFood', 'no food');
