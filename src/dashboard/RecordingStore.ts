@@ -8,7 +8,9 @@ import type { Recording, Replay, ReplayFrame } from '../shared/dashboard';
 export class DashboardError extends Error {
     constructor(message: string, public status = 400) { super(message); }
 }
-const maxBytes = 100 * 1024 * 1024;
+export const maxRecordingBytes = 100 * 1024 * 1024;
+const maxBytes = maxRecordingBytes;
+export interface RecordingRetention { maxAgeDays: number; maxBytes: number }
 
 export class RecordingStore {
     public readonly root: string;
@@ -110,6 +112,43 @@ export class RecordingStore {
         }
         if (!frames.length) throw new DashboardError('This recording does not contain a playable board.', 422);
         return { id, name: recording.name, frames, winner };
+    }
+
+    async prune(policy: RecordingRetention, now = Date.now()) {
+        if (!Number.isFinite(policy.maxAgeDays) || policy.maxAgeDays <= 0 || !Number.isSafeInteger(policy.maxBytes) || policy.maxBytes <= 0) {
+            throw new DashboardError('Recording retention requires a positive age and byte limit.');
+        }
+        const candidates = [];
+        for (const recording of await this.list()) {
+            const file = await this.resolve(recording.id);
+            let size = 0;
+            let modified = 0;
+            if (recording.kind === 'snapshots') {
+                for (const name of await readdir(file)) {
+                    if (!/^\d+_(start|move|end)\.json\.gz$/.test(name)) continue;
+                    const info = await lstat(path.join(file, name));
+                    if (!info.isFile()) continue;
+                    size += info.size; modified = Math.max(modified, info.mtimeMs);
+                }
+            } else {
+                const info = await stat(file);
+                size = info.size; modified = info.mtimeMs;
+            }
+            candidates.push({ ...recording, size, modified });
+        }
+        let bytes = candidates.reduce((sum, item) => sum + item.size, 0);
+        let deleted = 0;
+        const cutoff = now - policy.maxAgeDays * 24 * 60 * 60 * 1000;
+        for (const candidate of candidates.sort((a, b) => a.modified - b.modified)) {
+            if (!candidate.canDelete || (candidate.modified >= cutoff && bytes <= policy.maxBytes)) continue;
+            try { await this.delete(candidate.id); }
+            catch (error) {
+                if (error instanceof DashboardError && error.status === 409) continue;
+                if (!(error instanceof DashboardError && error.status === 404)) throw error;
+            }
+            bytes -= candidate.size; deleted++;
+        }
+        return { deleted, bytes };
     }
 
     async delete(id: string) {

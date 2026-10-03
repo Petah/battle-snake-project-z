@@ -4,20 +4,31 @@ import * as path from 'node:path';
 import { defaultSnakes, SnakeEndpoint } from '../shared/dashboard';
 import { StrategyRequest } from '../types/BTData';
 import { weight, WeightOptions } from '../lib/weight';
-import { RecordingStore, DashboardError } from './RecordingStore';
+import { RecordingStore, DashboardError, RecordingRetention } from './RecordingStore';
 import { MatchManager } from './MatchManager';
 
 export interface DashboardOptions {
-    host?: string; directory?: string; cli?: string; snakes?: SnakeEndpoint[]; turnDuration?: number; allowedHosts?: string[];
+    host?: string; directory?: string; cli?: string; snakes?: SnakeEndpoint[]; turnDuration?: number; allowedHosts?: string[]; retention?: RecordingRetention;
 }
 export class DashboardServer {
     readonly httpServer: http.Server;
     readonly matches: MatchManager;
     readonly recordings: RecordingStore;
-    constructor(port: number, options: DashboardOptions = {}) {
+    private cleanupTimer?: NodeJS.Timeout;
+    private cleanup?: Promise<unknown>;
+    private closing = false;
+    constructor(port: number, private options: DashboardOptions = {}) {
         const directory = path.resolve(options.directory ?? path.join(__dirname, '../../games'));
         this.matches = new MatchManager(options.cli ?? 'battlesnake', directory, options.turnDuration);
         this.recordings = new RecordingStore(directory, this.matches.isActive);
+        if (options.retention) {
+            void this.cleanupRecordings();
+            this.cleanupTimer = setInterval(() => { void this.cleanupRecordings(); }, 5 * 60 * 1000);
+            this.cleanupTimer.unref();
+            this.matches.on('change', id => {
+                if (!this.closing && this.matches.get(id).status !== 'running') void this.cleanupRecordings();
+            });
+        }
         const app = express();
         app.disable('x-powered-by');
         // The local dashboard has no cross-origin API. Prevent another website
@@ -77,8 +88,21 @@ export class DashboardServer {
             console.log(`Dashboard: http://${options.host ?? '127.0.0.1'}:${typeof address === 'object' ? address?.port : port}`);
         });
     }
+    cleanupRecordings(): Promise<unknown> {
+        if (!this.options.retention) return Promise.resolve();
+        if (!this.cleanup) {
+            this.cleanup = this.recordings.prune(this.options.retention).then(result => {
+                if (result.deleted) console.log(`Recording retention removed ${result.deleted} replay(s); ${result.bytes} bytes remain.`);
+                return result;
+            }).catch(error => { console.error('Recording retention failed:', error); }).finally(() => { this.cleanup = undefined; });
+        }
+        return this.cleanup;
+    }
     async close() {
+        this.closing = true;
+        clearInterval(this.cleanupTimer);
         await this.matches.close();
+        await this.cleanup;
         this.httpServer.closeAllConnections();
         await new Promise<void>((resolve, reject) => this.httpServer.close(error => error ? reject(error) : resolve()));
     }

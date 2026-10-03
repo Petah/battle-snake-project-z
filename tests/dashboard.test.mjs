@@ -121,3 +121,15 @@ test('shutdown cancels a match pending snake availability checks', async t => {
     await assert.rejects(starting, error => error.status === 503);
     assert.equal(manager.list().length, 0);
 });
+
+test('oversized active CLI recordings stop their writer process before unlimited growth', async t => {
+    const dir = await directory(t), cli = join(dir, 'cli');
+    await writeFile(cli, `#!${process.execPath}\nconst fs=require('node:fs'); const args=process.argv.slice(2);const output=args[args.indexOf('--output')+1];fs.writeFileSync(output,${JSON.stringify(JSON.stringify(fixture()) + '\n')}); setTimeout(()=>{const fd=fs.openSync(output,'r+');fs.ftruncateSync(fd,100*1024*1024+1);fs.closeSync(fd);},300);setInterval(()=>{},1000);`, { mode: 0o700 });
+    const snake = createServer((_req, res) => { res.setHeader('Content-Type', 'application/json'); res.end('{"apiversion":"1"}'); });
+    snake.listen(0, '127.0.0.1'); await once(snake, 'listening'); t.after(() => new Promise(resolve => snake.close(resolve)));
+    const { server } = await dashboard(t, { directory: dir, cli });
+    const state = await server.matches.start({ width: 11, height: 11, seed: 42, timeout: 500, gametype: 'solo', snakes: [{ name: 'Test', url: `http://127.0.0.1:${snake.address().port}` }] });
+    await until(() => server.matches.get(state.id).status === 'stopped');
+    assert.match(server.matches.get(state.id).error, /100 MB limit/);
+    await until(() => !server.matches.isActive(join(dir, 'matches', `${state.id}.jsonl`)));
+});

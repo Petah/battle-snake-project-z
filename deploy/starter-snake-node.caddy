@@ -1,0 +1,57 @@
+# Example public API configuration: replace snake.example.com before deployment.
+# Dashboard remains on loopback.
+http://snake.example.com, https://snake.example.com {
+    @snake0 path /snakes/projectz /snakes/projectz/*
+    handle @snake0 {
+        uri strip_prefix /snakes/projectz
+        reverse_proxy 127.0.0.1:9001
+    }
+    @snake1 path /snakes/keepaway /snakes/keepaway/*
+    handle @snake1 {
+        uri strip_prefix /snakes/keepaway
+        reverse_proxy 127.0.0.1:9002
+    }
+    @snake2 path /snakes/rando /snakes/rando/*
+    handle @snake2 {
+        uri strip_prefix /snakes/rando
+        reverse_proxy 127.0.0.1:9003
+    }
+    @snake3 path /snakes/tak /snakes/tak/*
+    handle @snake3 {
+        uri strip_prefix /snakes/tak
+        reverse_proxy 127.0.0.1:9004
+    }
+    @snake4 path /snakes/tailchase /snakes/tailchase/*
+    handle @snake4 {
+        uri strip_prefix /snakes/tailchase
+        reverse_proxy 127.0.0.1:9005
+    }
+    @snake5 path /snakes/aldo /snakes/aldo/*
+    handle @snake5 {
+        uri strip_prefix /snakes/aldo
+        reverse_proxy 127.0.0.1:9006
+    }
+    @snake6 path /snakes/dunno /snakes/dunno/*
+    handle @snake6 {
+        uri strip_prefix /snakes/dunno
+        reverse_proxy 127.0.0.1:9007
+    }
+    @snake7 path /snakes/workitout /snakes/workitout/*
+    handle @snake7 {
+        uri strip_prefix /snakes/workitout
+        reverse_proxy 127.0.0.1:9008
+    }
+    @snake8 path /snakes/projectz2 /snakes/projectz2/*
+    handle @snake8 {
+        uri strip_prefix /snakes/projectz2
+        reverse_proxy 127.0.0.1:9009
+    }
+    @snake9 path /snakes/lookahead /snakes/lookahead/*
+    handle @snake9 {
+        uri strip_prefix /snakes/lookahead
+        reverse_proxy 127.0.0.1:9010
+    }
+    handle {
+        reverse_proxy 127.0.0.1:9001
+    }
+}

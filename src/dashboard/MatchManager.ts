@@ -5,7 +5,7 @@ import { mkdir, open, realpath } from 'node:fs/promises';
 import * as path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import type { MatchOptions, MatchState, SnakeEndpoint } from '../shared/dashboard';
-import { DashboardError, normalizeFrame } from './RecordingStore';
+import { DashboardError, normalizeFrame, maxRecordingBytes } from './RecordingStore';
 
 type Runtime = { state: MatchState; child: ChildProcess; file: string; offset: number; partial: string; decoder: StringDecoder; timer?: NodeJS.Timeout; reading?: Promise<void>; lifetime?: NodeJS.Timeout };
 
@@ -100,6 +100,11 @@ export class MatchManager extends EventEmitter {
             let file;
             try {
                 file = await open(run.file, 'r');
+                if ((await file.stat()).size > maxRecordingBytes) {
+                    run.state.error = 'Match stopped because its recording reached the 100 MB limit.';
+                    this.stop(run.state.id);
+                    return;
+                }
                 const buffer = Buffer.alloc(64 * 1024);
                 let bytesRead: number;
                 do {

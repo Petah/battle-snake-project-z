@@ -1,0 +1,45 @@
+[Unit]
+Description=Project Z Battlesnake API servers (ten strategies)
+After=network.target
+
+[Service]
+Type=simple
+User=battlesnake
+Group=battlesnake
+WorkingDirectory=/srv/starter-snake-node/current
+ExecStart=/srv/starter-snake-node/runtimes/node-v24.21.0-linux-x64/bin/node /srv/starter-snake-node/current/dist/server/index.js
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS=--max-old-space-size=128
+Environment=HOST=127.0.0.1
+# Set this to the release identifier when deploying.
+Environment=BATTLESNAKE_VERSION=0.0.0
+Environment=REQUEST_LOGS=false
+Environment=GAME_DIRECTORY=/var/lib/battlesnake/games
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillMode=control-group
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+StateDirectory=battlesnake
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/battlesnake
+UMask=0027
+MemoryMax=256M
+MemoryHigh=192M
+CPUQuota=100%
+TasksMax=128
+LimitNOFILE=4096
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

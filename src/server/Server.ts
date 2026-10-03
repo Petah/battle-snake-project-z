@@ -65,7 +65,8 @@ export class Server {
             this.webSocketServer = new WebSocketServer(port, this.template);
         }
         const app = express();
-        app.use(logger('dev', { skip: () => process.env.NODE_ENV === 'test' }));
+        app.use(logger('dev', { skip: (_request, response) => process.env.NODE_ENV === 'test' ||
+            (process.env.NODE_ENV === 'production' && process.env.REQUEST_LOGS !== 'true' && response.statusCode < 400) }));
         app.use(express.json());
 
         app.get('/', (_request: Request, response: Response) => {

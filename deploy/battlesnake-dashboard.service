@@ -1,0 +1,45 @@
+[Unit]
+Description=Project Z local dashboard and Rules CLI matches
+After=network.target battlesnake-snakes.service
+Wants=battlesnake-snakes.service
+
+[Service]
+Type=simple
+User=battlesnake
+Group=battlesnake
+WorkingDirectory=/srv/starter-snake-node/current
+ExecStart=/srv/starter-snake-node/runtimes/node-v24.21.0-linux-x64/bin/node /srv/starter-snake-node/current/dist/dashboard/index.js
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS=--max-old-space-size=96
+Environment=DASHBOARD_HOST=127.0.0.1
+Environment=DASHBOARD_PORT=9000
+Environment=RECORDING_RETENTION_DAYS=7
+Environment=RECORDING_MAX_BYTES=1073741824
+Environment=BATTLESNAKE_CLI=/srv/starter-snake-node/bin/battlesnake
+Environment=GAME_DIRECTORY=/var/lib/battlesnake/games
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillMode=control-group
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/battlesnake
+UMask=0027
+MemoryMax=192M
+MemoryHigh=144M
+CPUQuota=50%
+TasksMax=128
+LimitNOFILE=4096
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target
