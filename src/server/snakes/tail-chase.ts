@@ -11,13 +11,11 @@ import { moveAway } from '../../lib/moveAway';
 import { BaseSnake } from './base-snake';
 
 export class TailChase extends BaseSnake {
-    start(data: BTData) {
-        return {
+    public readonly appearance = {
             color: Color.GREEN,
-            headType: HeadType.PIXEL,
-            tailType: TailType.HOOK,
-        };
-    }
+            head: HeadType.PIXEL,
+            tail: TailType.HOOK,
+    };
     move(data: BTData) {
         let direction;
         if (data.you.health < 20) {

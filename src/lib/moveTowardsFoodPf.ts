@@ -5,7 +5,7 @@ import { Pather } from './Pather';
 import { weight } from './weight';
 
 export function moveTowardsFoodPf(data: BTData) {
-    let pather = new Pather(data);
+    const pather = new Pather(data);
 
     const sorted = sortedFood(data);
     if (!sorted.length) {

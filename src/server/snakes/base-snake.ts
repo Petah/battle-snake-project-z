@@ -1,7 +1,11 @@
-export class BaseSnake {
-    public info: any = {};
+import { BTData, SnakeAppearance } from '../../types/BTData';
+import { Color } from '../../types/Color';
 
-    constructor() {
-        this.info.name = this.constructor.name;
+export class BaseSnake {
+    public info: { name: string; ops?: string[] } = { name: this.constructor.name };
+    public readonly appearance: SnakeAppearance = { color: Color.GREY, head: 'default', tail: 'default' };
+
+    start(_data: BTData): void {
+        // Stateless strategies need no game initialization.
     }
 }

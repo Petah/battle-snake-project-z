@@ -1,187 +1,198 @@
-const bodyParser = require('body-parser');
-const express = require('express');
+import express, { Request, Response, NextFunction } from 'express';
+import * as http from 'node:http';
 const logger = require('morgan');
-const {
-    notFoundHandler,
-    genericErrorHandler,
-} = require('./handlers');
-
-import { Request, Response } from 'express';
 
 import { log, logs } from '../lib/log';
 import { writeFile } from '../lib/writeFile';
-import { BTData } from '../types/BTData';
+import { BTData, BTRequest, SnakeAppearance } from '../types/BTData';
 import { MoveDirection } from '../types/MoveDirection';
-import { Color } from '../types/Color';
-import { HeadType } from '../types/HeadType';
-import { TailType } from '../types/TailType';
-import { HttpError } from './handlers';
+import { fallbackMove, isDirection } from '../lib/directions';
+import { genericErrorHandler } from './handlers';
+import { validateRequest } from './validateRequest';
 import { WebSocketServer } from './WebSocketServer';
 
-export interface ServerStartResponse {
-    color: Color,
-    headType: HeadType,
-    tailType: TailType,
-}
-
 export interface ServerMoveResponse {
-    move: MoveDirection,
+    move: MoveDirection;
+    shout?: string;
 }
 
 export interface Snake {
-    server: Server,
-    info: any,
-    start: (data: BTData) => ServerStartResponse,
-    move: (data: BTData) => ServerMoveResponse,
+    info: { name: string; ops?: string[] };
+    appearance: SnakeAppearance;
+    start: (data: BTData) => void;
+    move: (data: BTData) => { move?: unknown; shout?: string };
+    end?: (data: BTData) => void;
 }
 
-const clone = (data) => {
-    return JSON.parse(JSON.stringify(data));
-};
+export interface ServerOptions {
+    saveGame?: boolean;
+    debugWebSockets?: boolean;
+    recordingDirectory?: string;
+    host?: string;
+    author?: string;
+    version?: string;
+}
+
+interface GameRecording {
+    apiVersion: '1';
+    coordinateSystem: 'bottom-left';
+    snake: string;
+    start: BTRequest;
+    moves: BTRequest[];
+    end?: BTRequest;
+}
+
+interface GameState {
+    snake: Snake;
+    recording?: GameRecording;
+}
 
 export class Server {
-    private gameLog = {};
-
-    public webSocketServer: WebSocketServer;
+    public readonly httpServer: http.Server;
+    public readonly webSocketServer?: WebSocketServer;
+    private readonly games = new Map<string, GameState>();
+    private readonly template: Snake;
 
     constructor(
-        private port: number,
-        private snake: Snake,
-        private saveGame: boolean,
+        port: number,
+        private readonly createSnake: () => Snake,
+        private readonly options: ServerOptions = {},
     ) {
-        snake.server = this;
-        this.webSocketServer = new WebSocketServer(this.port, snake);
-
+        this.template = createSnake();
+        if (options.debugWebSockets) {
+            this.webSocketServer = new WebSocketServer(port, this.template);
+        }
         const app = express();
-        app.set('port', this.port);
+        app.use(logger('dev', { skip: () => process.env.NODE_ENV === 'test' }));
+        app.use(express.json());
 
-        app.enable('verbose errors');
+        app.get('/', (_request: Request, response: Response) => {
+            response.json({
+                apiversion: '1',
+                ...this.template.appearance,
+                ...(options.author ? { author: options.author } : {}),
+                version: options.version ?? require('../../package.json').version,
+            });
+        });
 
-        app.use(logger('dev'));
-        app.use(bodyParser.json());
-
-        app.post('/start', (request: Request, response: Response) => {
+        app.post('/start', (request: Request, response: Response, next: NextFunction) => {
+            logs.splice(0);
             try {
-                log('start', this.snake.constructor.name);
-                const startResponse = this.snake.start(request.body);
-                log('startResponse', startResponse);
+                const data = validateRequest(request.body);
+                const game = this.game(data);
+                this.broadcast('start', game.snake, data);
+                response.json({});
+            } catch (error) {
+                next(error);
+            } finally {
+                logs.splice(0);
+            }
+        });
 
-                if (this.saveGame) {
-                    request.body.log = clone(logs);
-                    this.gameLog[request.body.you.id] = {
-                        snake: snake.constructor.name,
-                        start: request.body,
-                        moves: [],
-                    };
+        app.post('/move', (request: Request, response: Response, next: NextFunction) => {
+            logs.splice(0);
+            try {
+                const requestData = validateRequest(request.body);
+                let game: GameState | undefined;
+                let result: { move?: unknown; shout?: string } | undefined;
+                try {
+                    game = this.game(requestData);
+                    result = game.snake.move(this.context(requestData));
+                } catch (error) {
+                    console.error('Strategy failed; using fallback move:', error);
                 }
-                this.webSocketServer.broadcast('start', {
-                    snake: snake.info,
-                    body: request.body,
-                });
-
-                logs.splice(0, logs.length);
-                return response.json(startResponse);
-            } catch (e) {
-                console.error(e);
+                const move: ServerMoveResponse = {
+                    move: isDirection(result?.move) ? result.move : fallbackMove(requestData),
+                };
+                if (typeof result?.shout === 'string') move.shout = result.shout.slice(0, 256);
+                log('moveResponse', move);
+                if (game?.recording) game.recording.moves[requestData.turn] = structuredClone(requestData);
+                this.broadcast('move', game?.snake ?? this.template, requestData);
+                response.json(move);
+            } catch (error) {
+                next(error);
+            } finally {
+                logs.splice(0);
             }
         });
 
-        app.post('/move', (request: Request, response: Response) => {
+        app.post('/end', (request: Request, response: Response, next: NextFunction) => {
+            logs.splice(0);
             try {
-                log('move', this.snake.constructor.name);
-                const data: BTData = request.body;
-                data.cache = {};
-                const moveResponse = this.snake.move(data);
-                log('moveResponse', moveResponse);
-
-                if (this.saveGame) {
-                    delete data.cache;
-                    request.body.log = clone(logs);
-                    this.gameLog[request.body.you.id].moves[request.body.turn] = request.body;
+                const data = validateRequest(request.body);
+                const key = this.key(data);
+                const game = this.games.get(key);
+                try {
+                    game?.snake.end?.(this.context(data));
+                    if (game?.recording) {
+                        game.recording.end = structuredClone(data);
+                        const filename = `${encodeURIComponent(data.game.id)}-${encodeURIComponent(data.you.id)}`;
+                        writeFile(filename, game.recording, options.recordingDirectory);
+                    }
+                    this.broadcast('end', game?.snake ?? this.template, data);
+                } finally {
+                    this.games.delete(key);
                 }
-
-                this.webSocketServer.broadcast('move', {
-                    snake: snake.info,
-                    body: request.body,
-                });
-
-                logs.splice(0, logs.length);
-                return response.json(moveResponse);
-            } catch (e) {
-                console.error(e);
+                response.json({});
+            } catch (error) {
+                next(error);
+            } finally {
+                logs.splice(0);
             }
         });
 
-        app.post('/end', (request: Request, response: Response) => {
-            try {
-                log('end', this.snake.constructor.name);
-                if (this.saveGame) {
-                    this.gameLog[request.body.you.id].end = request.body;
-                    writeFile(request.body.you.id, this.gameLog[request.body.you.id]);
-                    delete this.gameLog[request.body.you.id];
-                }
-
-                this.webSocketServer.broadcast('end', {
-                    snake: snake.info,
-                    body: request.body,
-                });
-
-                return response.json({});
-            } catch (e) {
-                console.error(e);
-            }
-        });
-
-        app.post('/ping', (request: Request, response: Response) => {
-            try {
-                log('ping', this.snake.constructor.name);
-                return response.json({});
-            } catch (e) {
-                console.error(e);
-            }
-        });
-
-        app.use('*', (req: Request, res: Response, next: (next?: any) => void) => {
-            console.dir(req.baseUrl);
-            // Root URL path
-            if (req.baseUrl === '') {
-                res.status(200);
-                return res.send(`
-                    <link href="https://fonts.googleapis.com/css?family=Roboto:100i&display=swap" rel="stylesheet">
-                    <style>
-                        body {
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            text-align: center;
-                            font-family: 'Roboto', sans-serif;
-                            font-weight: 300;
-                            font-size: 32px;
-                            color: #444;
-                        }
-                    </style>
-                        <h1>${this.snake.constructor.name}</h1>
-                `);
-            }
-
-            // Short-circuit favicon requests
-            if (req.baseUrl === '/favicon.ico') {
-                res.set({ 'Content-Type': 'image/x-icon' });
-                res.status(200);
-                res.end();
-                return next();
-            }
-
-            // Reroute all 404 routes to the 404 handler
-            const err = new Error() as HttpError;
-            err.status = 404;
-            return next(err);
-        });
-        app.use(notFoundHandler);
+        // Retained for the legacy local dashboard; current engine probes use GET /.
+        app.post('/ping', (_request: Request, response: Response) => response.json({}));
+        app.get('/favicon.ico', (_request: Request, response: Response) => response.status(204).end());
+        app.use((_request: Request, response: Response) => response.status(404).json({ status: 404, error: 'Not found' }));
         app.use(genericErrorHandler);
 
-        app.listen(app.get('port'), () => {
-            console.log('Server listening on port %s', app.get('port'))
+        this.httpServer = app.listen(port, options.host ?? '0.0.0.0', () => {
+            const address = this.httpServer.address();
+            console.log('Server listening on port %s (%s)', typeof address === 'object' ? address?.port : port, this.template.info.name);
+        });
+    }
+
+    private key(data: BTRequest): string {
+        return JSON.stringify([data.game.id, data.you.id]);
+    }
+
+    private context(data: BTRequest): BTData {
+        return { ...data, cache: {} };
+    }
+
+    private game(data: BTRequest): GameState {
+        const key = this.key(data);
+        let game = this.games.get(key);
+        if (!game) {
+            const snake = this.createSnake();
+            snake.start(this.context(data));
+            game = { snake };
+            if (this.options.saveGame) {
+                game.recording = {
+                    apiVersion: '1', coordinateSystem: 'bottom-left', snake: snake.info.name,
+                    start: structuredClone(data), moves: [],
+                };
+            }
+            this.games.set(key, game);
+        }
+        return game;
+    }
+
+    private broadcast(event: string, snake: Snake, data: BTRequest): void {
+        try {
+            this.webSocketServer?.broadcast(event, { snake: snake.info, body: { ...data, log: [...logs] } });
+        } catch (error) {
+            console.error('Debug broadcast failed:', error);
+        }
+    }
+
+    public async close(): Promise<void> {
+        await this.webSocketServer?.close();
+        this.games.clear();
+        this.httpServer.closeAllConnections();
+        await new Promise<void>((resolve, reject) => {
+            this.httpServer.close(error => error ? reject(error) : resolve());
         });
     }
 }

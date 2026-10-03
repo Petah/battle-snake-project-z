@@ -1,15 +1,10 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
-export const Writer = {
-    enabled: false,
-};
+export const Writer = { enabled: false };
 
-export function writeFile(id: string, json: any) {
-    if (!Writer.enabled) {
-        return;
-    }
-    const path = __dirname + '/../../games/' + id + '.json';
-    console.log('Writing file', path);
-    fs.writeFileSync(path, JSON.stringify(json, null, 4));
-    fs.chmodSync(path, 0o777);
+export function writeFile(id: string, json: unknown, directory = path.resolve(__dirname, '../../games')) {
+    if (!Writer.enabled) return;
+    fs.mkdirSync(directory, { recursive: true });
+    fs.writeFileSync(path.join(directory, id + '.json'), JSON.stringify(json, null, 4));
 }

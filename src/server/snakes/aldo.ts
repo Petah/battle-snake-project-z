@@ -16,10 +16,6 @@ export class Aldo extends BaseSnake {
         this.options = [ProjectZ, KeepAway, Rando, Tak, TailChase];
     }
 
-    start(data: BTData) {
-        return this.snake(data).start(data);
-    }
-
     move(data: BTData) {
         return this.snake(data).move(data);
     }

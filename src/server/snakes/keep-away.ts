@@ -10,13 +10,11 @@ import { smartRandomMove } from '../../lib/smartRandomMove';
 import { BaseSnake } from './base-snake';
 
 export class KeepAway extends BaseSnake {
-    start(data: BTData) {
-        return {
+    public readonly appearance = {
             color: Color.YELLOW,
-            headType: HeadType.DEAD,
-            tailType: TailType.CURLED,
-        };
-    }
+            head: HeadType.DEAD,
+            tail: TailType.CURLED,
+    };
     move(data: BTData) {
         let direction;
         if (data.you.health < 10) {

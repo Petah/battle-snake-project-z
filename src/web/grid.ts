@@ -14,7 +14,7 @@ export function loadGrid() {
     const grid = $('.grid');
 
     const getCol = (x, y) => {
-        return grid.find('.row').eq(y).find('.col').eq(x);
+        return grid.find(`.row[data-y="${y}"]`).find('.col').eq(x);
     };
 
     const BLOCKED = 1;
@@ -26,6 +26,11 @@ export function loadGrid() {
     });
 
     const drawBoard = (data: BTData) => {
+        data = {
+            ...data, cache: {},
+            board: { ...data.board, hazards: data.board.hazards ?? [] },
+            you: { ...data.you, head: data.you.head ?? data.you.body[0], length: data.you.length ?? data.you.body.length },
+        };
         $('.log').html('');
         if (data.log) {
             for (const log of data.log) {
@@ -36,11 +41,13 @@ export function loadGrid() {
         grid.html('');
         const matrix = [];
         const costs = [];
-        for (var y = 0; y < data.board.height; y++) {
+        for (let rowIndex = 0; rowIndex < data.board.height; rowIndex++) {
+            // Old recordings used a top-left origin; API v1 recordings use bottom-left.
+            const y = data.game.ruleset ? data.board.height - 1 - rowIndex : rowIndex;
             matrix[y] = [];
             costs[y] = [];
-            const row = $('<div>').addClass('row').appendTo(grid);
-            for (var x = 0; x < data.board.width; x++) {
+            const row = $('<div>').addClass('row').attr('data-y', y).appendTo(grid);
+            for (let x = 0; x < data.board.width; x++) {
                 const w = weight(data, x, y, true);
                 matrix[y][x] = w > BLOCKED_THRESHOLD ? FREE : BLOCKED;
                 costs[y][x] = 100 - w;
@@ -94,10 +101,12 @@ export function loadGrid() {
     // }
 
     let game = null;
+    let loadedGameFile = '';
     const loadGame = (gameFile, turn = null) => {
         $('.moves').html('');
         $.getJSON('../games/' + gameFile).done((response) => {
             game = response;
+            loadedGameFile = gameFile;
             if (turn) {
                 drawBoard(game.moves[turn]);
             } else {
@@ -132,7 +141,10 @@ export function loadGrid() {
     $('.moves').on('click', '.move', function () {
         const turn = $(this).data('turn');
         drawBoard(game.moves[turn]);
-        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?game=' + game.moves[turn].you.id + '&turn=' + turn;
+        const url = new URL(window.location.href);
+        url.searchParams.set('game', loadedGameFile);
+        url.searchParams.set('turn', String(turn));
+        const newUrl = url.toString();
         window.history.pushState({
             path: newUrl,
         }, '', newUrl);

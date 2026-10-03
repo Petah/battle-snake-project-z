@@ -8,18 +8,17 @@ import { smartRandomMove } from '../../lib/smartRandomMove';
 import { randomMove } from '../../lib/randomMove';
 import { moveAway } from '../../lib/moveAway';
 import { moveTowardsTail } from '../../lib/moveTowardsTail';
-import { Server } from '../Server';
-import { WebSocketServer } from '../WebSocketServer';
+import { BaseSnake } from './base-snake';
 
-export class WorkItOut {
-    private opsCount: number;
-    public ops: any[];
-    public info: any;
+export class WorkItOut extends BaseSnake {
+    public ops: ((data: BTData) => unknown)[] = [];
+    public readonly appearance = {
+        color: Color.BROWN,
+        head: HeadType.SAND_WORM,
+        tail: TailType.SHARP,
+    };
 
-    constructor() {
-    }
-
-    start(data: BTData) {
+    start(_data: BTData) {
         const options = [
             moveAway,
             moveTowardsEnemy,
@@ -28,9 +27,9 @@ export class WorkItOut {
             randomMove,
             smartRandomMove,
         ];
-        this.opsCount = Math.ceil(Math.random() * options.length);
+        const opsCount = Math.max(1, Math.ceil(Math.random() * options.length));
         this.ops = [];
-        while (this.ops.length < this.opsCount) {
+        while (this.ops.length < opsCount) {
             this.ops.push(options[Math.floor(Math.random() * options.length)]);
         }
         this.ops = this.ops.filter((v, i, a) => a.indexOf(v) === i);
@@ -38,11 +37,6 @@ export class WorkItOut {
         this.info = {
             name: this.constructor.name,
             ops: this.ops.map(op => op.name),
-        };
-        return {
-            color: Color.BROWN,
-            headType: HeadType.SAND_WORM,
-            tailType: TailType.SHARP,
         };
     }
 

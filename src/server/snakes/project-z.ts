@@ -9,13 +9,11 @@ import { moveAway } from '../../lib/moveAway';
 import { BaseSnake } from './base-snake';
 
 export class ProjectZ extends BaseSnake {
-    start(data: BTData) {
-        return {
+    public readonly appearance = {
             color: Color.PINK,
-            headType: HeadType.BELUGA,
-            tailType: TailType.BLOCK_BUM,
-        };
-    }
+            head: HeadType.BELUGA,
+            tail: TailType.BLOCK_BUM,
+    };
 
     move(data: BTData) {
         let direction;

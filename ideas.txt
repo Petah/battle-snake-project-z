@@ -3,19 +3,5 @@ look ahead a few moves
 target the head if longer
 try to move to the space furtherest away from everything
 
-nn:
-
-input struct is a grid of each tile
-1 = self
-2 = self head
-3 = self tail
-4 = enemy
-5 = enemy head
-6 = enemy tail
-7 = food
-8 = empty
-
-output is direction, and turn number as an increase in turn number signals its not dead
-
 check available space in a confined area, and avoid it if its smaller that the snake
 create and start games in angular app

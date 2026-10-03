@@ -1,5 +1,4 @@
 import { ProjectZ } from "./snakes/project-z";
-// import { NN } from "./snakes/nn";
 import { KeepAway } from "./snakes/keep-away";
 import { Rando } from "./snakes/rando";
 import { Tak } from "./snakes/tak";

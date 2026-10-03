@@ -9,13 +9,11 @@ import { smartRandomMove } from '../../lib/smartRandomMove';
 import { BaseSnake } from './base-snake';
 
 export class Rando extends BaseSnake {
-    start(data: BTData) {
-        return {
+    public readonly appearance = {
             color: Color.CARROT,
-            headType: HeadType.EVIL,
-            tailType: TailType.FAT_RATTLE,
-        };
-    }
+            head: HeadType.EVIL,
+            tail: TailType.FAT_RATTLE,
+    };
     move(data: BTData) {
         let direction;
         if (data.you.health < 20) {

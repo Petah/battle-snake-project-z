@@ -4,7 +4,7 @@ import { log } from '../lib/log';
 import { Snake } from './Server';
 
 export class WebSocketServer {
-    private connections: connection[] = [];
+    private httpServer: http.Server;
     private wsServer: server;
 
     constructor(
@@ -13,7 +13,9 @@ export class WebSocketServer {
     ) {
         log('Web socket start server', port + 10000);
 
-        const httpServer = http.createServer((request, response) => {
+        const httpServer = this.httpServer = http.createServer((_request, response) => {
+            response.writeHead(404);
+            response.end();
         });
 
         httpServer.listen(port + 10000, () => { });
@@ -33,8 +35,6 @@ export class WebSocketServer {
                 log('Web socket close', connection);
             });
 
-            this.connections.push(connection);
-
             this.send(connection, 'snake', {
                 name: this.snake.constructor.name,
                 port: this.port,
@@ -47,6 +47,13 @@ export class WebSocketServer {
         const string = JSON.stringify({ message, data });
         // log('Web socket broadcast', string);
         this.wsServer.broadcast(string);
+    }
+
+    public async close(): Promise<void> {
+        this.wsServer.shutDown();
+        await new Promise<void>((resolve, reject) => {
+            this.httpServer.close(error => error ? reject(error) : resolve());
+        });
     }
 
     private send(connection: connection, message: string, data) {

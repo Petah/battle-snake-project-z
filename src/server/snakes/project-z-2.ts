@@ -12,13 +12,11 @@ import { moveTowardsTail } from '../../lib/moveTowardsTail';
 import { moveTowardsKill } from '../../lib/moveTowardsKill';
 
 export class ProjectZ2 extends BaseSnake {
-    start(data: BTData) {
-        return {
+    public readonly appearance = {
             color: Color.GREY,
-            headType: HeadType.SAND_WORM,
-            tailType: TailType.ROUND_BUM,
-        };
-    }
+            head: HeadType.SAND_WORM,
+            tail: TailType.ROUND_BUM,
+    };
     move(data: BTData) {
         let direction;
         direction = moveTowardsFoodPf(data);

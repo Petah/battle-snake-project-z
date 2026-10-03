@@ -11,13 +11,11 @@ import { BaseSnake } from './base-snake';
 import { moveTowardsKill } from '../../lib/moveTowardsKill';
 
 export class Dunno extends BaseSnake {
-    start(data: BTData) {
-        return {
+    public readonly appearance = {
             color: Color.NEPHRITIS,
-            headType: HeadType.SAND_WORM,
-            tailType: TailType.ROUND_BUM,
-        };
-    }
+            head: HeadType.SAND_WORM,
+            tail: TailType.ROUND_BUM,
+    };
 
     move(data: BTData) {
         let direction;
