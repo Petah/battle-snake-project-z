@@ -1,5 +1,5 @@
 [Unit]
-Description=Project Z Battlesnake API servers (ten strategies)
+Description=Project Z Battlesnake API servers (eleven strategies)
 After=network.target
 
 [Service]
@@ -14,6 +14,7 @@ Environment=HOST=127.0.0.1
 # Set this to the release identifier when deploying.
 Environment=BATTLESNAKE_VERSION=0.0.0
 Environment=REQUEST_LOGS=false
+Environment=RECORD_GAMES=true
 Environment=GAME_DIRECTORY=/var/lib/battlesnake/games
 Restart=on-failure
 RestartSec=5

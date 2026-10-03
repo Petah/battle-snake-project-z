@@ -204,7 +204,11 @@ async function initialize() {
             } finally { button('start-match').disabled = false; }
         });
     };
-    button('add-snake').onclick = () => { snakes.push({ name: `Snake ${snakes.length + 1}`, url: 'http://localhost:9011', selected: true }); renderPlayers(); persist(); reconnect(); };
+    button('add-snake').onclick = () => {
+        const available = config.snakes.find(candidate => !snakes.some(snake => snake.name === candidate.name));
+        snakes.push({ ...(available ?? { name: `Snake ${snakes.length + 1}`, url: 'http://localhost:9012' }), selected: true });
+        renderPlayers(); persist(); reconnect();
+    };
     button('rankings-tab').onclick = () => tab('rankings'); button('refresh-rankings').onclick = () => handle(refreshRankings);
     button('play-tab').onclick = () => tab('play'); button('recordings-tab').onclick = () => { tab('recordings'); handle(refreshRecordings); };
     button('refresh-recordings').onclick = () => handle(refreshRecordings); button('refresh-matches').onclick = () => handle(refreshMatches); input('recording-search').oninput = renderRecordings;

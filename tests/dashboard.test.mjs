@@ -53,7 +53,8 @@ test('dashboard serves native assets, analyzes boards, and rejects cross-site, f
     const { request, base } = await dashboard(t, { directory: dir, cli: '/missing/cli' });
     const page = await request('/'); assert.equal(page.status, 200); assert.match(await page.text(), /Start match/); assert.match(page.headers.get('content-security-policy'), /script-src 'self'/);
     assert.equal((await request('/bundle.js')).status, 200);
-    const config = await (await request('/api/config')).json(); assert.equal(config.cliAvailable, false); assert.equal(config.snakes.length, 10);
+    const config = await (await request('/api/config')).json(); assert.equal(config.cliAvailable, false);
+    assert.deepEqual(config.snakes.map(snake => snake.name), Object.values(require('../dist/server/snakes.js').default).map(Snake => Snake.name));
     const [recording] = await (await request('/api/recordings')).json();
     const analysis = await request(`/api/recordings/${recording.id}/analyze`, json('POST', { frame: 0 }));
     assert.equal(analysis.status, 200); assert.equal((await analysis.json()).length, 3);

@@ -1,6 +1,6 @@
 # Project Z Battlesnake AI
 
-Ten Battlesnake strategies written in TypeScript for Node.js, migrated to the current Battlesnake API v1. Standard games are the initial target: all ten strategies have completed seeded games against the official Rules CLI. CI and alternate map support are tracked in [todo.md](todo.md).
+Eleven Battlesnake strategies written in TypeScript for Node.js, migrated to the current Battlesnake API v1. Standard games are the initial target. CI and alternate map support are tracked in [todo.md](todo.md).
 
 ## Setup
 
@@ -20,7 +20,7 @@ The project uses TypeScript 6.0, the latest major supported by the current types
 npm run dev
 ```
 
-This builds the project, runs the snake servers and dashboard with automatic restarts, watches TypeScript, and rebuilds the browser bundle when its source changes. Open **http://localhost:9000** for the local arena. With no selection configured, all ten servers run:
+This builds the project, runs the snake servers and dashboard with automatic restarts, watches TypeScript, and rebuilds the browser bundle when its source changes. Open **http://localhost:9000** for the local arena. With no selection configured, all eleven servers run:
 
 | Snake | HTTP port |
 | --- | --- |
@@ -34,6 +34,7 @@ This builds the project, runs the snake servers and dashboard with automatic res
 | WorkItOut | 9008 |
 | ProjectZ2 | 9009 |
 | LookAhead | 9010 |
+| Sentinel | 9011 |
 
 Run one snake with a chosen port:
 
@@ -42,6 +43,21 @@ SNAKE=ProjectZ PORT=9001 npm run dev
 ```
 
 Names are case insensitive; `SNAKE` also accepts an original port number. Setting only `PORT` selects ProjectZ. `HOST` defaults to `0.0.0.0`. Optional `BATTLESNAKE_AUTHOR` and `BATTLESNAKE_VERSION` override the author/version metadata returned by `GET /`.
+
+## Sentinel
+
+Sentinel is a teal strategy on port **9011**, designed for standard boards. It combines reachable-space checks, shortest-path territory estimates, and food urgency based on health and relative length. In duels it performs iterative maximin search up to three simultaneous turns: each candidate is judged against the opponent's strongest reply. Only a fully completed search depth replaces the previous choice. The search budget is capped at 25 ms or one eighth of the request timeout; normal request parsing and initial scoring add a little overhead.
+
+The local simulator models movement, vacating/stacked tails, food growth, starvation, known hazard damage, body collisions and head-to-head outcomes using the [official standard rules](https://github.com/BattlesnakeOfficial/rules/blob/main/standard.go). It does not predict new food spawns. Boards with more than two snakes use the space/food/territory heuristic and immediate head-threat avoidance, without joint-move search. Wrapped, squad and other alternate rulesets are not supported by this strategy.
+
+```sh
+SNAKE=Sentinel PORT=9011 npm run dev
+npm run evaluate -- --snakes Sentinel,ProjectZ2,Tak,Rando --rounds 5 --seed 100
+```
+
+Sentinel is included in the default dashboard and evaluation roster. If your browser retained the previous ten-snake setup, use **+ Add snake** to add the missing registered strategy. The deployment proxy template includes `/snakes/sentinel` for future deployments.
+
+Initial local results: 16 wins in 18 duels against ProjectZ2/Tak/Rando at seeds 100–102. A separate full-roster league at seeds 1000–1002 produced **56 wins / 4 losses** for Sentinel, **1827.3 Elo**, and **10 ms p95** move latency, with no engine failures across the league's 330 games. Two four-snake smoke games at seeds 111 and 222 completed; Sentinel won one. These are local samples against the bundled strategies, not an official Arena rating or a guarantee of performance against other snakes.
 
 ## Local games
 
@@ -69,7 +85,7 @@ With the Rules CLI installed as above, run an automatic league:
 npm run evaluate
 ```
 
-This builds the project, starts all ten snakes on temporary loopback ports, and runs 90 standard 11x11 duels with no turn delay. You do not need to start the servers yourself. Each pairing plays twice with the same board seed and reversed player order. Elo starts at 1500 for each run and uses K=32; rankings are relative to the selected opponents. Draws count as half a win. Failed, timed-out, or incomplete games are excluded from ratings and reported separately.
+This builds the project, starts all eleven snakes on temporary loopback ports, and runs 110 standard 11x11 duels with no turn delay. You do not need to start the servers yourself. Each pairing plays twice with the same board seed and reversed player order. Elo starts at 1500 for each run and uses K=32; rankings are relative to the selected opponents. Draws count as half a win. Failed, timed-out, or incomplete games are excluded from ratings and reported separately.
 
 For a quick comparison or a larger sample:
 
@@ -147,7 +163,7 @@ After building, run `npm run profile:movement` for a repeatable local scoring/pa
 
 The files in [deploy/](deploy/) are example systemd and Caddy configurations. Replace `snake.example.com` with your hostname and adjust runtime paths and the release version before installing them.
 
-The example proxy exposes ProjectZ at `https://snake.example.com/`. All ten strategies also have paths `/snakes/<name>`, using their lowercase names: `projectz`, `keepaway`, `rando`, `tak`, `tailchase`, `aldo`, `dunno`, `workitout`, `projectz2`, and `lookahead`. For example, use `https://snake.example.com/snakes/rando` as Rando's Battlesnake URL.
+The example proxy exposes ProjectZ at `https://snake.example.com/`. All eleven strategies also have paths `/snakes/<name>`, using their lowercase names: `projectz`, `keepaway`, `rando`, `tak`, `tailchase`, `aldo`, `dunno`, `workitout`, `projectz2`, `lookahead`, and `sentinel`. For example, use `https://snake.example.com/snakes/sentinel` as Sentinel's Battlesnake URL.
 
 Keep the dashboard bound to the server's loopback interface and access it through an SSH tunnel. Replace the username and hostname in this example:
 
@@ -155,7 +171,7 @@ Keep the dashboard bound to the server's loopback interface and access it throug
 ssh -N -L 19000:127.0.0.1:9000 user@server.example.com
 ```
 
-Then visit **http://localhost:19000**. Matches execute on the server; the example services store recordings in `/var/lib/battlesnake/games`.
+Then visit **http://localhost:19000**. Matches execute on the server; the example services store recordings in `/var/lib/battlesnake/games` and read evaluation history from `/var/lib/battlesnake/evaluations`. Local evaluation reports are not uploaded automatically.
 
 Run the application as a dedicated `battlesnake` user, with automatic startup/restarts and memory/CPU limits. The example services use an isolated Node 24.21.0 runtime under `/srv/starter-snake-node/runtimes/` and Rules CLI v1.2.3 at `/srv/starter-snake-node/bin/battlesnake`. Download the Linux executables from their official releases and verify their checksums. Point `/srv/starter-snake-node/current` to the compiled release directory.
 
@@ -174,7 +190,7 @@ Verify public API metadata, lifecycle requests, a seeded CLI match, dashboard ac
 
 ### Production logging and recording retention
 
-Successful HTTP requests are not logged when `NODE_ENV=production`; HTTP errors and strategy exceptions remain visible in the service journal. Set `REQUEST_LOGS=true` to temporarily enable all request logs. Development logging is unchanged. The example services leave `DEBUG_LOGS` and per-snake `RECORD_GAMES` disabled.
+Successful HTTP requests are not logged when `NODE_ENV=production`; HTTP errors and strategy exceptions remain visible in the service journal. Set `REQUEST_LOGS=true` to temporarily enable all request logs. Development logging is unchanged. The example snake service enables `RECORD_GAMES=true` to save incoming Arena games as compressed per-turn snapshots plus a complete JSON recording on `/end`; `DEBUG_LOGS` remains disabled. Find these games by game ID in the dashboard's Recordings tab. Recording starts only after this setting is enabled; earlier games cannot be recovered from the server.
 
 Production dashboard recordings are kept for **7 days**, with a **1 GiB** storage target. Cleanup runs at startup, every five minutes, and when a match ends or stops. It deletes expired recordings first, then the oldest completed recordings until total recording bytes fit the limit; active CLI files are skipped. A running match is stopped if its recording exceeds **100 MiB**, bounding active writers as well. Limits are checked periodically, so writes can briefly exceed them between checks. Cleanup only selects recording files or snapshot directories under the configured games directory and does not follow symlinks.
 

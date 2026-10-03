@@ -48,7 +48,7 @@ test('Elo updates conserve total rating and draws reward the lower rated snake',
 
 test('schedule balances every pairing and seed in both orders; invalid options are rejected', () => {
     const options = evaluationOptions({ rounds: 2 }); const duels = schedule(options);
-    assert.equal(duels.length, 180);
+    assert.equal(duels.length, options.snakes.length * (options.snakes.length - 1) * 2);
     for (let index = 0; index < duels.length; index += 2) {
         assert.deepEqual(duels[index].players, [...duels[index + 1].players].reverse());
         assert.equal(duels[index].seed, duels[index + 1].seed);

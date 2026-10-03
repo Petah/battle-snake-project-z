@@ -17,6 +17,7 @@ Environment=RECORDING_RETENTION_DAYS=7
 Environment=RECORDING_MAX_BYTES=1073741824
 Environment=BATTLESNAKE_CLI=/srv/starter-snake-node/bin/battlesnake
 Environment=GAME_DIRECTORY=/var/lib/battlesnake/games
+Environment=EVALUATION_DIRECTORY=/var/lib/battlesnake/evaluations
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=15

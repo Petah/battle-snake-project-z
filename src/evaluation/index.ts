@@ -12,7 +12,7 @@ async function main() {
     } });
     if (values.help) {
         console.log(`Usage: npm run evaluate -- [options]
-  --snakes ProjectZ,Rando,Tak  Registered snakes (default: all ten)
+  --snakes ProjectZ,Rando,Tak  Registered snakes (default: all registered snakes)
   --rounds 1                  Seeds per pairing; each seed uses both orders
   --seed 42                   First seed, incremented for each round
   --width 11 --height 11      Odd board dimensions, 7–25
