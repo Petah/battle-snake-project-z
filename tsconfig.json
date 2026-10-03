@@ -10,8 +10,9 @@
         "rootDir": "src",
         "esModuleInterop": true,
         "strict": false,
-        "types": ["node", "angular", "jquery"],
-        "allowUmdGlobalAccess": true,
+        "types": [
+            "node"
+        ],
         "noEmitOnError": true,
         "forceConsistentCasingInFileNames": true
     }

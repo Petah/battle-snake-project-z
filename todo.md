@@ -46,7 +46,7 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 ## 4. Restore local games and migrate all strategies
 
 - [x] Pin Rules CLI v1.2.3 in the documented local workflow; download and checksum-verify a temporary executable for validation.
-- [x] Document CLI commands that replace the legacy PHP/`engine` workflow for local games. Dashboard engine controls remain pending in section 5.
+- [x] Document CLI commands that replace the legacy PHP/`engine` workflow for local games. The dashboard now launches the same CLI workflow.
 - [x] Run one snake in a standard solo game, then a standard multiplayer match.
 - [x] Add seeded match commands for repeatable comparisons.
 - [x] Migrate and verify all ten registered snake variants, including upstream LookAhead.
@@ -57,15 +57,15 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 
 ## 5. Restore and modernise the debug dashboard
 
-- [ ] Replace unsupported AngularJS with a lightweight TypeScript UI.
-- [ ] Replace PHP debug pages with a Node-served dashboard and remove unnecessary CDN dependencies.
-- [ ] Replace calls to the old engine API with a supported local match workflow.
+- [x] Replace unsupported AngularJS with a lightweight TypeScript UI.
+- [x] Replace PHP debug pages with a Node-served dashboard and remove unnecessary CDN dependencies.
+- [x] Replace calls to the old engine API with a supported local match workflow.
 - [x] Update board rendering for the bottom-left coordinate origin.
-- [ ] Keep browser configuration separate from server strategy imports.
-- [ ] Make HTTP/WebSocket URLs configurable and handle disconnected clients cleanly.
-- [ ] Review recording writes, permissions, and the destructive recording-delete endpoint before exposing the dashboard.
-- [x] Retain existing legacy recordings and support their original top-left orientation in the renderer; label new JSON recordings and compressed per-turn snapshots API v1/bottom-left. Replay links retain the actual recording filename.
-- [x] Add automated browser-bundle checks for legacy and API v1 coordinates, hazards, body arrows, and empty selections.
+- [x] Keep browser configuration separate from server strategy imports.
+- [x] Make HTTP/WebSocket URLs configurable and handle disconnected clients cleanly.
+- [x] Review recording writes, permissions, and the destructive recording-delete endpoint before exposing the dashboard.
+- [x] Retain existing legacy recordings and support their original top-left orientation in the renderer; label new JSON recordings and compressed per-turn snapshots API v1/bottom-left. Replay links identify the selected recording and retain its filename in the viewer.
+- [x] Add automated SVG renderer and browser connection checks for legacy and API v1 coordinates, hazards, body arrows, and empty selections.
 - [x] Remove the neural-network experiment, its PHP page, generated outputs, network directory, and old references, as requested.
 
 ## 6. Verify and document the upgraded project
@@ -99,7 +99,7 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 
 ## Review limits
 
-The initial review covered source inspection, current official documentation, a lockfile audit, a compiler configuration check, and targeted scoring checks. The dependency/build upgrade and NN removal are now complete. Verified a clean install, compilation, linting (zero errors; existing warnings), nine server startups, HTTP lifecycle/move requests, WebSocket events, and weighted pathfinding under Node 24. The API migration now passes 18 automated checks, typechecking, and linting (zero errors; 28 legacy warnings). Verified single-snake configuration, invalid configuration failures, optional WebSockets, and a solo game through turn 351. All nine strategies completed standard 11x11 matches with Rules CLI v1.2.3 at seeds 42 and 99 (final turns 292 and 142), without engine communication errors. Maximum reported move latency was 51 ms against a 500 ms timeout. This is local compatibility evidence, not comprehensive strategy or alternate-map validation. The subsequent scoring and collision stage is recorded below; the next stage is dashboard modernisation.
+The initial review covered source inspection, current official documentation, a lockfile audit, a compiler configuration check, and targeted scoring checks. The dependency/build upgrade and NN removal are now complete. Verified a clean install, compilation, linting (zero errors; existing warnings), nine server startups, HTTP lifecycle/move requests, WebSocket events, and weighted pathfinding under Node 24. The API migration now passes 18 automated checks, typechecking, and linting (zero errors; 28 legacy warnings). Verified single-snake configuration, invalid configuration failures, optional WebSockets, and a solo game through turn 351. All nine strategies completed standard 11x11 matches with Rules CLI v1.2.3 at seeds 42 and 99 (final turns 292 and 142), without engine communication errors. Maximum reported move latency was 51 ms against a 500 ms timeout. This is local compatibility evidence, not comprehensive strategy or alternate-map validation. The subsequent scoring and collision stage is recorded below; dashboard modernisation is recorded below.
 
 ## Upstream merge
 
@@ -116,3 +116,11 @@ Weighted pathfinding caches grids per request and scoring options, then clones n
 Validation: 37 regression checks pass, including weighted clone behaviour, repeated independent paths, body/tail collisions, flood-fill query order, head threats, and server fallback. Build/typecheck pass; lint has zero errors and 30 legacy warnings. All ten snakes completed standard 11x11 matches at seeds 42 and 99 (final turns 279 and 393), with no engine communication errors and maximum reported move latency of 28 ms against a 500 ms timeout. These are local samples; random strategies remain stochastic.
 
 `npm run profile:movement` measures a full-board scoring pass plus three weighted paths, using 50 samples after warm-up. Local median/p95 times were 0.35/0.69 ms for 11x11, 0.69/1.16 ms for 19x19, and 1.11/2.00 ms for 25x25. This is a repeatable synthetic workload, not a worst-case timing guarantee. Build before profiling.
+
+## Dashboard modernisation
+
+Completed section 5. Replaced AngularJS, jQuery, PHP pages, and CDN scripts with a Node-served TypeScript dashboard at `http://localhost:9000`. `npm run dev` starts both the snakes and dashboard; compiled deployments can run `npm run dashboard` separately. The UI launches seeded standard/solo matches through Rules CLI v1.2.3, streams live turns, stops child processes, and saves CLI replay files automatically. Browser endpoint configuration is separate from strategy imports; optional debug sockets reconnect and close cleanly.
+
+Replays support old whole-game JSON, compressed per-turn snapshots, and CLI JSONL, with correct legacy/API v1 orientation, hazards, body arrows, playback, health/length, saved logs, and scoring inspection. Recording access is confined to the configured games directory and rejects symlinks and traversal. Deletion requires selecting one recording and confirming; active match files are protected. The dashboard binds to loopback by default and rejects cross-site requests and unexpected hostnames. PHP bulk-delete endpoints were removed; writes retain normal filesystem permissions.
+
+Validation: 43 automated checks pass; build and typecheck pass; lint has zero errors and 28 existing unused-code warnings. All 21 existing recordings loaded (2,254 frames). A headless Chrome check used the real CLI for ProjectZ versus Rando and verified live rendering, replay navigation/playback, scoring, replay URL reload, selective deletion, match stopping, and a 390 px mobile layout without browser errors. Next: CI for clean installation, typechecking, linting, tests, and building; hazard/alternate-mode strategy work follows that.

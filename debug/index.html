@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Project Z · Local arena</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/styles.css">
+<script src="/bundle.js" defer></script>
+</head>
+<body>
+<header class="masthead"><a class="brand" href="/"><span class="brand-mark">Z</span><span>PROJECT Z<small>LOCAL ARENA</small></span></a><span class="environment"><i></i> LOCAL DEVELOPMENT</span></header>
+<main class="layout">
+<aside class="sidebar">
+<nav class="tabs" aria-label="Workspace"><button id="play-tab" class="active" type="button">Play</button><button id="recordings-tab" type="button">Recordings</button></nav>
+<section id="play-panel">
+<div class="section-heading"><h2>Set up a match</h2><span>01 / CONFIGURE</span></div>
+<form id="match-form">
+<div class="fields"><label>Mode<select id="gametype"><option value="standard">Standard</option><option value="solo">Solo</option></select></label><label>Seed<input id="seed" type="number" value="42" step="1" required></label></div>
+<div class="fields"><label>Width<select id="width"></select></label><label>Height<select id="height"></select></label><label>Timeout · ms<input id="timeout" type="number" min="10" max="5000" value="500" required></label></div>
+<div class="section-heading compact"><h3>Players</h3><button id="add-snake" type="button" class="text-button">+ Add snake</button></div>
+<div id="players" class="players"></div>
+<details class="advanced"><summary>Connection settings</summary><p>Edit a player's HTTP URL above. WebSocket monitoring is optional and requires <code>DEBUG_WEBSOCKETS=true</code> on the snake servers.</p><label class="check-row"><input id="monitor" type="checkbox"> Monitor debug sockets</label><div id="socket-settings"></div></details>
+<button id="start-match" class="primary full" type="submit">Start match <span>↗</span></button>
+<p id="cli-status" class="hint"></p>
+</form>
+<div class="section-heading"><h3>Recent matches</h3><button id="refresh-matches" class="text-button" type="button">Refresh</button></div><div id="matches" class="item-list"><p class="empty-note">Your matches will appear here.</p></div>
+</section>
+<section id="recordings-panel" hidden>
+<div class="section-heading"><h2>Saved recordings</h2><button id="refresh-recordings" class="text-button" type="button">Refresh</button></div><p class="hint">Local matches and snake recordings, including legacy games.</p><label class="search-label"><span class="sr-only">Search recordings</span><input id="recording-search" type="search" placeholder="Find a recording…"></label><div id="recordings" class="item-list"></div>
+</section>
+</aside>
+<section class="workspace">
+<div id="notice" class="notice" role="status" hidden></div>
+<div class="view-heading"><div><p class="eyebrow">02 / WATCH & INSPECT</p><h1 id="view-title">Ready when you are.</h1><p id="view-subtitle">Choose your snakes and start a match, or open a saved recording.</p></div><span id="view-status" class="status">IDLE</span></div>
+<div class="board-panel">
+<div class="board-toolbar"><span id="board-meta">STANDARD · 11 × 11</span><div><label class="toggle"><input type="checkbox" id="show-weights"> Weights</label><button id="analyze" class="secondary" type="button" disabled>Score board</button><button id="stop-match" class="danger" type="button" hidden>Stop match</button></div></div>
+<div id="board" class="board" aria-live="off"><div class="board-placeholder"><span class="placeholder-mark">↗</span><h2>A little space. A lot of snakes.</h2><p>The next match starts here.</p></div></div>
+<div class="playback"><button id="previous" class="icon-button" type="button" aria-label="Previous frame" disabled>‹</button><button id="playback-toggle" class="secondary" type="button" disabled>Play replay</button><button id="next" class="icon-button" type="button" aria-label="Next frame" disabled>›</button><label class="timeline"><span class="sr-only">Replay frame</span><input type="range" id="timeline" min="0" max="0" value="0" disabled></label><span id="turn-label">TURN —</span></div>
+</div>
+<div class="detail-grid"><section class="detail-panel"><div class="section-heading"><h3>On the board</h3><span id="survivors">—</span></div><div id="snake-stats"><p class="empty-note">Health and length update each turn.</p></div></section><section class="detail-panel"><div class="section-heading"><h3>Move details</h3><button id="delete-recording" class="text-button destructive" type="button" hidden>Delete recording</button></div><pre id="move-log">No move selected.</pre></section></div>
+<footer>PROJECT Z <span>STANDARD GAMES · API V1</span></footer>
+</section>
+</main>
+</body>
+</html>

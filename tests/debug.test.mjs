@@ -1,45 +1,47 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { runInNewContext } from 'node:vm';
 import { load } from 'cheerio';
-import { fixture } from './helpers.mjs';
+import { fixture, require } from './helpers.mjs';
+const { renderBoard } = require('../dist/web/board.js');
+const { normalizeFrame } = require('../dist/shared/replay.js');
+const { SocketMonitor } = require('../dist/web/SocketMonitor.js');
 
-const bundle = await readFile(new URL('../debug/bundle.js', import.meta.url), 'utf8');
-
-function dashboard() {
-    const $ = load('<div class="grid"></div><div class="data"></div><div class="log"></div>');
-    $.fn.css = function (styles) {
-        this.each((_index, node) => {
-            $(node).attr('style', Object.entries(styles).map(([name, value]) => `${name}:${value}`).join(';'));
-        });
-        return this;
-    };
-    const window = {};
-    runInNewContext(bundle, {
-        window, $, console: { log() {}, error() {} },
-        angular: { module() { return { controller() {} }; } },
-    });
-    return { $, window };
-}
-
-test('browser bundle renders API v1 coordinates, hazards, and body arrows', () => {
-    const { $, window } = dashboard();
-    const body = fixture();
-    body.board.hazards = [{ x: 2, y: 2 }];
-    window.loadGrid({ body, storage: {}, logs: [], coordinateSystem: 'bottom-left' });
-    assert.deepEqual($('.grid-row').toArray().map(row => $(row).attr('data-y')), ['2', '1', '0']);
-    assert.equal($('.grid-row[data-y="0"] .grid-col').eq(1).find('.snake').text(), '↑');
-    assert.match($('.grid-row[data-y="2"] .grid-col').eq(2).attr('style'), /#ff0000/);
+test('SVG board renders API v1 coordinates, hazards, body arrows, and escaped names', () => {
+    const body = fixture(); body.board.hazards = [{ x: 2, y: 2 }]; body.you.name = '<script>alert(1)</script>';
+    const $ = load(renderBoard(normalizeFrame(body)), { xml: true });
+    assert.equal($('rect[data-y="0"]').first().attr('y'), '2');
+    assert.equal($('rect[data-y="2"]').first().attr('y'), '0');
+    assert.ok($('text').toArray().some(node => $(node).text() === '↑'));
+    assert.ok($('title').toArray().some(node => $(node).text().startsWith('Hazard')));
+    assert.equal($('script').length, 0);
 });
 
-test('browser bundle accepts an empty selection and retains legacy top-left coordinates', () => {
-    const { $, window } = dashboard();
-    window.loadGrid(null);
-    assert.equal($('.grid-row').length, 0);
-    const body = fixture();
-    delete body.game.ruleset;
-    window.loadGrid({ body, storage: {}, logs: [], coordinateSystem: 'top-left' });
-    assert.deepEqual($('.grid-row').toArray().map(row => $(row).attr('data-y')), ['0', '1', '2']);
-    assert.equal($('.grid-row[data-y="0"] .grid-col').eq(1).find('.snake').text(), '↓');
+test('replays retain legacy orientation and safely reject empty or malformed frames', () => {
+    const body = fixture(); delete body.game.ruleset;
+    const frame = normalizeFrame(body);
+    const $ = load(renderBoard(frame), { xml: true });
+    assert.equal(frame.origin, 'top-left');
+    assert.equal($('rect[data-y="0"]').first().attr('y'), '0');
+    assert.ok($('text').toArray().some(node => $(node).text() === '↓'));
+    assert.equal(normalizeFrame(null), undefined);
+    assert.equal(normalizeFrame({ ...body, board: { ...body.board, hazards: {} } }), undefined);
+    body.game.ruleset = { name: 17 }; body.you.health = 'bad';
+    assert.equal(normalizeFrame(body).body.game.ruleset.name, 'standard');
+    assert.equal(normalizeFrame(body).body.you.health, 0);
+});
+
+test('socket monitor reconnects and cancels pending connections on disable', t => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const sockets = [], states = [], frames = [];
+    class FakeSocket { constructor() { sockets.push(this); } close() { this.onclose?.(); } }
+    const original = globalThis.WebSocket; globalThis.WebSocket = FakeSocket; t.after(() => { globalThis.WebSocket = original; });
+    const monitor = new SocketMonitor((...state) => states.push(state), frame => frames.push(frame));
+    t.after(() => monitor.close());
+    monitor.start([{ name: 'Test', websocketUrl: 'ws://localhost:19001' }]);
+    sockets[0].onopen();
+    sockets[0].onmessage({ data: JSON.stringify({ data: { body: fixture() } }) });
+    sockets[0].onmessage({ data: 'invalid' });
+    assert.equal(frames.length, 1); assert.deepEqual(states.at(-1), ['Test', 'connected']);
+    sockets[0].close(); t.mock.timers.tick(1000); assert.equal(sockets.length, 2);
+    sockets[1].close(); monitor.close(); t.mock.timers.tick(30000); assert.equal(sockets.length, 2);
 });

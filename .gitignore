@@ -18,6 +18,7 @@ engine
 engine2
 games/**/*.json.gz
 games/**/*.json
+games/**/*.jsonl
 /env.json
 
 # Local Battlesnake CLI and generated browser output
