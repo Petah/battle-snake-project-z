@@ -158,3 +158,11 @@ Upgraded Sentinel with tail-release-aware space estimates, food selection that c
 Controlled standard 11x11 duels at seeds 801–803, both player orders, concurrency one and a 300-second game limit: original Sentinel lost all six; upgraded Sentinel won three and lost three. This is evidence of improvement on this sample, not dominance over Vesper. Shared-process HTTP p95 rose from 126 ms to 196 ms; those measurements include waiting behind the other snake. The upgraded version also won all four duels against ProjectZ2 and Rando at seed 909. All these games completed without engine failures.
 
 Validation: all 83 automated checks and the build pass; lint has zero errors and 28 existing warnings. Added regression coverage for tail-release timing and skipping search on forced moves. This upgrade has not been deployed.
+
+## Sentinel counter to Vesper's search upgrade
+
+Added bounded per-position/per-move opponent reply hints: later search iterations try the previous refutation first, without reusing it as a score or pruning rule. Added pressure for an opponent's reachable-space shortfall and low-health inability to reach known food. Search remains capped at 75 ms. Vesper from `1434105` was unchanged throughout testing.
+
+At seeds 1201–1202, both orders, the deployed Sentinel source from `1570e6b` won 1/4; the counter won 2/4. The counter was frozen before those tests and then won 1/4 on separate seeds 1401–1402, for 3/8 overall. Standard 11x11, 500 ms timeout, concurrency one and 300-second match limit; no engine failures and 197–198 ms shared-process p95. These small samples do not establish general improvement: Vesper still led overall. Keep this as a local experiment pending stronger evidence. Next: inspect losing replays for reachable-space overestimation and food/length disadvantages before further tuning.
+
+Regression checks: 83 automated tests and build pass; lint has zero errors and 28 existing warnings. Sentinel won all four duels against ProjectZ2 and Rando at seed 1501; all six league games completed without engine failures. This counter has not been deployed.

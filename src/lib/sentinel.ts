@@ -80,11 +80,17 @@ function score(board: SentinelBoard, id: string): number {
     const enemies = board.snakes.filter(s => s !== you), clear = sentinelClearance(board);
     const own = sentinelDistances(board, you, clear);
     const rival = enemies.map(enemy => sentinelDistances(board, enemy, clear));
+    const rivalArea = new Int16Array(enemies.length);
+    const rivalFood = new Array<number>(enemies.length).fill(Infinity);
     let area = 0, territory = 0, enemyTerritory = 0, foodDistance = Infinity;
     for (let cell = 0; cell < own.length; cell++) {
         let theirDistance = Infinity, theirLength = 0;
         for (let index = 0; index < enemies.length; index++) {
             const d = rival[index][cell];
+            if (d >= 0) {
+                rivalArea[index]++;
+                if (board.food.has(cell)) rivalFood[index] = Math.min(rivalFood[index], d);
+            }
             if (d >= 0 && (d < theirDistance || (d === theirDistance && enemies[index].body.length > theirLength))) {
                 theirDistance = d; theirLength = enemies[index].body.length;
             }
@@ -108,9 +114,18 @@ function score(board: SentinelBoard, id: string): number {
     const tail = own[you.body.at(-1)] >= 0 ? 25 : 0;
     const x = you.body[0] % board.width, y = Math.floor(you.body[0] / board.width);
     const center = Math.min(2, x, y, board.width - 1 - x, board.height - 1 - y) * 6;
+    // Reward squeezing the opponent's actual reachable region, not just its
+    // next-turn options. Count all its reachable food conservatively: territory
+    // ownership alone does not prove that we can starve it.
+    let pressure = 0;
+    for (let index = 0; index < enemies.length; index++) {
+        const enemy = enemies[index];
+        pressure += Math.min(12, Math.max(0, enemy.body.length + 2 - rivalArea[index])) * 100;
+        if (enemy.health < 20 && rivalFood[index] >= enemy.health) pressure += (20 - enemy.health) * 15;
+    }
     return -deficit * 400 + Math.min(area, length * 2 + 8) * 3 + territory * 1.5 - enemyTerritory * 0.9 +
         Math.min(8, lead) * 45 + length * 3 + foodValue + you.health * 0.35 - starving + tail +
-        mobility * 10 - (lead >= 0 ? rivalMobility * 12 : 0) + center;
+        mobility * 10 - (lead >= 0 ? rivalMobility * 12 : 0) + center + pressure;
 }
 
 export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: number; nodes: number } {
@@ -138,6 +153,7 @@ export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: num
     const expired = Symbol('deadline');
     interface Entry { depth: number; value: number; bound: 'exact' | 'upper' | 'lower'; move?: MoveDirection }
     const table = new Map<string, Entry>();
+    const refutations = new Map<string, Partial<Record<MoveDirection, MoveDirection>>>();
     // Snake order is fixed in surviving duel states; identities and board
     // geometry are constant throughout this move's table.
     const key = (state: SentinelBoard) => state.snakes.map(s => `${s.health}:${s.body.join(',')}`).join('|') + '/' + [...state.food].join(',');
@@ -174,7 +190,7 @@ export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: num
         if (!moves.length) return DEAD;
         let bestValue = -Infinity, bestMove = moves[0];
         for (const move of moves) {
-            const value = reply(state, move, depth, alpha, beta, clear);
+            const value = reply(state, move, depth, alpha, beta, clear, position);
             if (value > bestValue) { bestValue = value; bestMove = move; }
             alpha = Math.max(alpha, bestValue);
             if (alpha >= beta) break;
@@ -183,24 +199,31 @@ export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: num
             bound: bestValue <= originalAlpha ? 'upper' : bestValue >= originalBeta ? 'lower' : 'exact' });
         return bestValue;
     };
-    const reply = (state: SentinelBoard, move: MoveDirection, depth: number, alpha: number, beta: number, clear: Int16Array): number => {
-        const enemy = state.snakes.find(s => s.id !== id), replies = order(state, enemy, clear);
-        let worst = Infinity;
+    const reply = (state: SentinelBoard, move: MoveDirection, depth: number, alpha: number, beta: number, clear: Int16Array, position: string): number => {
+        const enemy = state.snakes.find(s => s.id !== id), replies = order(state, enemy, clear, refutations.get(position)?.[move]);
+        let worst = Infinity, refutation: MoveDirection | undefined;
         for (const response of replies.length ? replies : directions) {
             const moves = state.snakes.map(s => s.id === id ? move : response);
-            worst = Math.min(worst, search(sentinelStep(state, moves), depth - 1, alpha, beta));
+            const value = search(sentinelStep(state, moves), depth - 1, alpha, beta);
+            if (value < worst) { worst = value; refutation = response; }
             beta = Math.min(beta, worst);
             if (alpha >= beta) break;
         }
+        // This stores ordering hints only, never scores or bounds. A response
+        // that refuted this move last iteration is a useful first reply now.
+        if (refutation && refutations.size < 20000) {
+            const saved = refutations.get(position) ?? {};
+            saved[move] = refutation; refutations.set(position, saved);
+        }
         return worst;
     };
-    const clear = sentinelClearance(board);
+    const clear = sentinelClearance(board), rootKey = key(board);
     for (let depth = 1; depth <= 16; depth++) {
         let iterationBest = best, value = -Infinity;
         const scores: { move: MoveDirection; value: number }[] = [];
         try {
             for (const { move } of ordered) {
-                const nextValue = reply(board, move, depth, value, Infinity, clear);
+                const nextValue = reply(board, move, depth, value, Infinity, clear, rootKey);
                 scores.push({ move, value: nextValue });
                 if (nextValue > value) { value = nextValue; iterationBest = move; }
             }
