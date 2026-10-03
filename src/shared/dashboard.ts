@@ -2,7 +2,7 @@ import type { BTRequest } from '../types/BTData';
 
 export interface SnakeEndpoint { name: string; url: string; websocketUrl?: string }
 export const defaultSnakes: SnakeEndpoint[] = [
-    'ProjectZ', 'KeepAway', 'Rando', 'Tak', 'TailChase', 'Aldo', 'Dunno', 'WorkItOut', 'ProjectZ2', 'LookAhead', 'Sentinel',
+    'ProjectZ', 'KeepAway', 'Rando', 'Tak', 'TailChase', 'Aldo', 'Dunno', 'WorkItOut', 'ProjectZ2', 'LookAhead', 'Sentinel', 'Vesper',
 ].map((name, index) => ({ name, url: `http://localhost:${9001 + index}`, websocketUrl: `ws://localhost:${19001 + index}` }));
 
 export interface ReplayFrame {

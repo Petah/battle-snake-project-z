@@ -20,7 +20,7 @@ The project uses TypeScript 6.0, the latest major supported by the current types
 npm run dev
 ```
 
-This builds the project, runs the snake servers and dashboard with automatic restarts, watches TypeScript, and rebuilds the browser bundle when its source changes. Open **http://localhost:9000** for the local arena. With no selection configured, all eleven servers run:
+This builds the project, runs the snake servers and dashboard with automatic restarts, watches TypeScript, and rebuilds the browser bundle when its source changes. Open **http://localhost:9000** for the local arena. With no selection configured, all twelve servers run:
 
 | Snake | HTTP port |
 | --- | --- |
@@ -35,6 +35,7 @@ This builds the project, runs the snake servers and dashboard with automatic res
 | ProjectZ2 | 9009 |
 | LookAhead | 9010 |
 | Sentinel | 9011 |
+| Vesper | 9012 |
 
 Run one snake with a chosen port:
 
@@ -58,6 +59,24 @@ npm run evaluate -- --snakes Sentinel,ProjectZ2,Tak,Rando --rounds 5 --seed 100
 Sentinel is included in the default dashboard and evaluation roster. If your browser retained the previous ten-snake setup, use **+ Add snake** to add the missing registered strategy. The deployment proxy template includes `/snakes/sentinel` for future deployments.
 
 Initial local results: 16 wins in 18 duels against ProjectZ2/Tak/Rando at seeds 100–102. A separate full-roster league at seeds 1000–1002 produced **56 wins / 4 losses** for Sentinel, **1827.3 Elo**, and **10 ms p95** move latency, with no engine failures across the league's 330 games. Two four-snake smoke games at seeds 111 and 222 completed; Sentinel won one. These are local samples against the bundled strategies, not an official Arena rating or a guarantee of performance against other snakes.
+
+## Vesper
+
+Vesper is an amethyst strategy on port **9012** and the strongest bundled snake in local duels. It is built around four ideas:
+
+- **Time-aware flood fill.** A body segment only blocks a cell until its owner's tail has moved past it, so corridors that open in time count as space, and a tail that stays put after eating is blocked for one extra turn. This accepts safe pockets that a static fill rejects and avoids the stacked-tail trap.
+- **Voronoi territory with pressure.** Cells are assigned to whichever head reaches them first, with ties going to the longer snake. The evaluation rewards Vesper's share, penalises the rival's share, and adds a pressure bonus when the rival has few legal moves, so a longer Vesper squeezes rather than orbits.
+- **Deeper duel search.** In standard duels Vesper runs iterative-deepening maximin over simultaneous moves with alpha-beta pruning. Each iteration reorders the root moves by the previous result, and only a completed depth replaces the previous choice. The budget is 30% of the request timeout minus 30 ms, capped at 140 ms, which typically reaches depth 4–6 on an 11x11 board. `VESPER_BUDGET_MS` overrides the budget for experiments.
+- **Nearest-rival search with greedy bystanders.** With three or more snakes, only the closest rival answers adversarially; the others follow a one-ply greedy policy. This keeps the search tractable while respecting the snake most likely to interfere.
+
+The simulator follows the standard rules for movement, food growth, starvation, known hazard damage, body collisions and head-to-head resolution, and does not predict food spawns. Wrapped, squad and other alternate rulesets are not supported.
+
+```bash
+SNAKE=Vesper PORT=9012 npm run dev
+npm run evaluate -- --snakes Vesper,Sentinel,ProjectZ,Tak --rounds 2 --seed 100 --max-seconds 150
+```
+
+All local snakes share one Node process, and Vesper's search is synchronous, so run evaluations with `--concurrency 1` and a generous `--max-seconds`; higher concurrency makes every snake's requests queue behind Vesper's and causes engine timeouts. Initial local results: a full-roster league at seed 42 produced **22 wins / 0 losses** for Vesper, **1738.5 Elo**, and **125 ms p95** move latency, with no engine failures across 132 games; Sentinel finished second with 20 wins. Two four-snake smoke games against Sentinel, Tak and ProjectZ2 at seeds 111 and 222 were both won by Vesper. These are local samples against the bundled strategies, not an official Arena rating.
 
 ## Local games
 
@@ -85,7 +104,7 @@ With the Rules CLI installed as above, run an automatic league:
 npm run evaluate
 ```
 
-This builds the project, starts all eleven snakes on temporary loopback ports, and runs 110 standard 11x11 duels with no turn delay. You do not need to start the servers yourself. Each pairing plays twice with the same board seed and reversed player order. Elo starts at 1500 for each run and uses K=32; rankings are relative to the selected opponents. Draws count as half a win. Failed, timed-out, or incomplete games are excluded from ratings and reported separately.
+This builds the project, starts all twelve snakes on temporary loopback ports, and runs 132 standard 11x11 duels with no turn delay. You do not need to start the servers yourself. Each pairing plays twice with the same board seed and reversed player order. Elo starts at 1500 for each run and uses K=32; rankings are relative to the selected opponents. Draws count as half a win. Failed, timed-out, or incomplete games are excluded from ratings and reported separately.
 
 For a quick comparison or a larger sample:
 
@@ -163,7 +182,7 @@ After building, run `npm run profile:movement` for a repeatable local scoring/pa
 
 The files in [deploy/](deploy/) are example systemd and Caddy configurations. Replace `snake.example.com` with your hostname and adjust runtime paths and the release version before installing them.
 
-The example proxy exposes ProjectZ at `https://snake.example.com/`. All eleven strategies also have paths `/snakes/<name>`, using their lowercase names: `projectz`, `keepaway`, `rando`, `tak`, `tailchase`, `aldo`, `dunno`, `workitout`, `projectz2`, `lookahead`, and `sentinel`. For example, use `https://snake.example.com/snakes/sentinel` as Sentinel's Battlesnake URL.
+The example proxy exposes ProjectZ at `https://snake.example.com/`. All twelve strategies also have paths `/snakes/<name>`, using their lowercase names: `projectz`, `keepaway`, `rando`, `tak`, `tailchase`, `aldo`, `dunno`, `workitout`, `projectz2`, `lookahead`, `sentinel`, and `vesper`. For example, use `https://snake.example.com/snakes/sentinel` as Sentinel's Battlesnake URL.
 
 Keep the dashboard bound to the server's loopback interface and access it through an SSH tunnel. Replace the username and hostname in this example:
 

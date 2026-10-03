@@ -56,6 +56,11 @@ http://snake.example.com, https://snake.example.com {
         uri strip_prefix /snakes/sentinel
         reverse_proxy 127.0.0.1:9011
     }
+    @snake11 path /snakes/vesper /snakes/vesper/*
+    handle @snake11 {
+        uri strip_prefix /snakes/vesper
+        reverse_proxy 127.0.0.1:9012
+    }
     handle {
         reverse_proxy 127.0.0.1:9001
     }

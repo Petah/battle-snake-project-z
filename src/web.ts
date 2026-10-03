@@ -206,7 +206,7 @@ async function initialize() {
     };
     button('add-snake').onclick = () => {
         const available = config.snakes.find(candidate => !snakes.some(snake => snake.name === candidate.name));
-        snakes.push({ ...(available ?? { name: `Snake ${snakes.length + 1}`, url: 'http://localhost:9012' }), selected: true });
+        snakes.push({ ...(available ?? { name: `Snake ${snakes.length + 1}`, url: 'http://localhost:9013' }), selected: true });
         renderPlayers(); persist(); reconnect();
     };
     button('rankings-tab').onclick = () => tab('rankings'); button('refresh-rankings').onclick = () => handle(refreshRankings);
