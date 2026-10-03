@@ -6,7 +6,8 @@ import { log, logs } from '../lib/log';
 import { writeFile, writeTurnFile } from '../lib/writeFile';
 import { StrategyRequest, BTRequest, SnakeAppearance } from '../types/BTData';
 import { MoveDirection } from '../types/MoveDirection';
-import { fallbackMove, isDirection } from '../lib/directions';
+import { fallbackMove, isDirection, nextPosition } from '../lib/directions';
+import { isFree, isHeadThreat } from '../lib/isFree';
 import { genericErrorHandler } from './handlers';
 import { validateRequest } from './validateRequest';
 import { WebSocketServer } from './WebSocketServer';
@@ -104,8 +105,10 @@ export class Server {
                 } catch (error) {
                     console.error('Strategy failed; using fallback move:', error);
                 }
+                const position = isDirection(result?.move) ? nextPosition(requestData.you.head, result.move) : undefined;
                 const move: ServerMoveResponse = {
-                    move: isDirection(result?.move) ? result.move : fallbackMove(requestData),
+                    move: position && isFree(requestData, position.x, position.y) && !isHeadThreat(requestData, position.x, position.y)
+                        ? result.move as MoveDirection : fallbackMove(requestData),
                 };
                 if (typeof result?.shout === 'string') move.shout = result.shout.slice(0, 256);
                 log('moveResponse', move);

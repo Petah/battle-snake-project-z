@@ -1,3 +1,4 @@
+import { isFree, isHeadThreat } from './isFree';
 import { BTRequest, BTXY } from '../types/BTData';
 import { MoveDirection } from '../types/MoveDirection';
 
@@ -28,12 +29,14 @@ export function directionTo(head: BTXY, target: BTXY): MoveDirection | undefined
 
 export function fallbackMove(data: BTRequest): MoveDirection {
     const head = data.you.head;
-    const safe = directions.find(direction => {
+    const candidates = directions.filter(direction => {
         const { x, y } = nextPosition(head, direction);
-        return x >= 0 && y >= 0 && x < data.board.width && y < data.board.height &&
-            !data.board.snakes.some(snake => snake.body.some(part => part.x === x && part.y === y)) &&
-            !data.you.body.some(part => part.x === x && part.y === y);
+        return isFree(data, x, y);
     });
+    const safe = candidates.find(direction => {
+        const { x, y } = nextPosition(head, direction);
+        return !isHeadThreat(data, x, y);
+    }) ?? candidates[0];
     if (safe) return safe;
     // A trapped snake still needs a valid response. Continue forward if possible.
     return data.you.body[1] ? directionTo(data.you.body[1], head) ?? MoveDirection.UP : MoveDirection.UP;

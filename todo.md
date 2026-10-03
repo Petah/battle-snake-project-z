@@ -34,12 +34,12 @@ Review evidence: the available compiler failed with TS6053 because `files` conta
 
 - [x] Centralise direction-to-coordinate conversion: current Battlesnake uses `up = y + 1` and `down = y - 1`.
 - [x] Update pathfinding, random movement, smart random movement, and other directional helpers to use the shared conversion.
-- [ ] Reject out-of-bounds coordinates before applying scoring bonuses.
-- [ ] Fix flood-fill caching so occupied and out-of-bounds squares do not inherit free-region counts.
-- [ ] Make collision and tail handling consistent with simultaneous movement and duplicated tail segments during growth.
-- [ ] Review head-to-head decisions against equal-length and longer opponents.
-- [ ] Preserve the custom pathfinding fork's weighted-cost behaviour if replacing the dependency.
-- [ ] Profile flood-fill and pathfinding; keep responses comfortably within `game.timeout`.
+- [x] Reject out-of-bounds coordinates before applying scoring bonuses.
+- [x] Fix flood-fill caching so occupied and out-of-bounds squares do not inherit free-region counts.
+- [x] Make collision and tail handling consistent with simultaneous movement and duplicated tail segments during growth.
+- [x] Review head-to-head decisions against equal-length and longer opponents.
+- [x] Retain the pinned custom pathfinding fork and verify weighted-cost behaviour when cloning cached grids.
+- [x] Profile flood-fill and pathfinding; keep responses comfortably within `game.timeout`.
 
 Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 and returned a cached free-space count of 6 for an occupied square. Vertical movement was reversed relative to the current API and has now been corrected.
 
@@ -72,7 +72,7 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 
 - [x] Add focused checks for API metadata, lifecycle responses, malformed input, and valid move responses.
 - [x] Add direction and fallback-boundary regression checks.
-- [ ] Add scoring-boundary, flood-fill caching, tail growth, and head-collision regression checks alongside their fixes.
+- [x] Add scoring-boundary, flood-fill caching, tail growth, and head-collision regression checks alongside their fixes.
 - [x] Verify simultaneous games do not share strategy state or overwrite recordings.
 - [x] Run seeded CLI matches and measure move latency for each strategy.
 - [ ] Add CI for clean installation, typechecking, linting, tests, and building.
@@ -99,10 +99,20 @@ Review evidence: a targeted check scored the off-board square `(-1, 0)` as 75 an
 
 ## Review limits
 
-The initial review covered source inspection, current official documentation, a lockfile audit, a compiler configuration check, and targeted scoring checks. The dependency/build upgrade and NN removal are now complete. Verified a clean install, compilation, linting (zero errors; existing warnings), nine server startups, HTTP lifecycle/move requests, WebSocket events, and weighted pathfinding under Node 24. The API migration now passes 18 automated checks, typechecking, and linting (zero errors; 28 legacy warnings). Verified single-snake configuration, invalid configuration failures, optional WebSockets, and a solo game through turn 351. All nine strategies completed standard 11x11 matches with Rules CLI v1.2.3 at seeds 42 and 99 (final turns 292 and 142), without engine communication errors. Maximum reported move latency was 51 ms against a 500 ms timeout. This is local compatibility evidence, not comprehensive strategy or alternate-map validation. The next work is section 3 scoring, flood-fill, and collision correctness.
+The initial review covered source inspection, current official documentation, a lockfile audit, a compiler configuration check, and targeted scoring checks. The dependency/build upgrade and NN removal are now complete. Verified a clean install, compilation, linting (zero errors; existing warnings), nine server startups, HTTP lifecycle/move requests, WebSocket events, and weighted pathfinding under Node 24. The API migration now passes 18 automated checks, typechecking, and linting (zero errors; 28 legacy warnings). Verified single-snake configuration, invalid configuration failures, optional WebSockets, and a solo game through turn 351. All nine strategies completed standard 11x11 matches with Rules CLI v1.2.3 at seeds 42 and 99 (final turns 292 and 142), without engine communication errors. Maximum reported move latency was 51 ms against a 500 ms timeout. This is local compatibility evidence, not comprehensive strategy or alternate-map validation. The subsequent scoring and collision stage is recorded below; the next stage is dashboard modernisation.
 
 ## Upstream merge
 
 Fetched and integrated 44 previously missing commits through `27a2ffb` (`Tail stack`). Preserved the Node 24 / Express 5 / TypeScript 6 build, NN removal, API v1 validation/fallbacks, and game isolation. Adapted upstream strategy storage, state functions, squad-aware food selection, hazard weighting, LookAhead, ranking scraper, and debug viewer to the current build. Browser-safe MD5 preserves the upstream ID ordering; the scraper uses native Node fetch with current Cheerio. Both old whole-game JSON and compressed per-turn replays remain readable.
 
 Post-merge validation: 25 automated checks pass, along with typechecking, the browser build, and PHP syntax/render smoke checks. Lint has zero errors and 37 legacy unused-code warnings. The dependency audit reports zero vulnerabilities. Standard 11x11 games at seeds 42 and 99 completed with all ten snakes (final turns 164 and 184), without engine communication errors. Maximum reported latency was 274 ms against a 500 ms timeout. This replaces the earlier nine-snake match baseline above; scoring, collision, and alternate-map work remains pending.
+
+## Movement and scoring fixes
+
+Completed section 3 after the upstream merge. Off-board scoring returns zero before accessing grid annotations. Flood-fill caches only connected free cells, preserves zero for occupied cells, and uses a queue with a visited set. Movement helpers, scoring, pathfinding, and server fallback share next-turn body occupancy: unique tails vacate, duplicated tails remain blocked, and old heads become body segments. Squad body overlap requires the active ruleset and explicit permission. Head-to-head checks consider reachable squares for equal or longer opponents, excluding blocked reversals. The server replaces unsafe strategy moves when a safer direction is available.
+
+Weighted pathfinding caches grids per request and scoring options, then clones nodes and costs for each search. LookAhead simulates food consumption and tail stacking without mutating API input, and caps recursive search at the smaller of 50 ms or one quarter of the request timeout. Its opponent positions remain a static heuristic; this is not a complete multiplayer simulator or support for alternate maps.
+
+Validation: 37 regression checks pass, including weighted clone behaviour, repeated independent paths, body/tail collisions, flood-fill query order, head threats, and server fallback. Build/typecheck pass; lint has zero errors and 30 legacy warnings. All ten snakes completed standard 11x11 matches at seeds 42 and 99 (final turns 279 and 393), with no engine communication errors and maximum reported move latency of 28 ms against a 500 ms timeout. These are local samples; random strategies remain stochastic.
+
+`npm run profile:movement` measures a full-board scoring pass plus three weighted paths, using 50 samples after warm-up. Local median/p95 times were 0.35/0.69 ms for 11x11, 0.69/1.16 ms for 19x19, and 1.11/2.00 ms for 25x25. This is a repeatable synthetic workload, not a worst-case timing guarantee. Build before profiling.

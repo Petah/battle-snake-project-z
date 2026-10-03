@@ -1,6 +1,7 @@
 import { directionTo } from './directions';
 import { weight, BLOCKED_THRESHOLD, WeightOptions } from './weight';
 import { StrategyRequest, BTSnake } from '../types/BTData';
+import { isOutOfBounds, isFree } from './isFree';
 import { MoveDirection } from '../types/MoveDirection';
 
 const PF = require('pathfinding');
@@ -20,24 +21,32 @@ export interface Path {
 }
 
 export function pathTo(request: StrategyRequest, snake: BTSnake, x: number, y: number, weightOptions: WeightOptions = { blockHeads: true, attackHeads: true }): Path | null {
-    const matrix = [];
-    const costs = [];
-    for (let y = 0; y < request.body.board.height; y++) {
-        matrix[y] = [];
-        costs[y] = [];
-        for (let x = 0; x < request.body.board.width; x++) {
-            const w = weight(request, x, y, weightOptions);
-            matrix[y][x] = w > BLOCKED_THRESHOLD ? FREE : BLOCKED;
-            costs[y][x] = 100 - w;
+    if (isOutOfBounds(request.body, x, y) || isOutOfBounds(request.body, snake.head.x, snake.head.y)) return null;
+    const settings = { borders: true, snakeBodies: true, deadEnds: true, avoidFood: false, ...weightOptions };
+    const key = JSON.stringify(settings);
+    const grids = request.cache.pathfindingGrids ??= {};
+    if (!grids[key]) {
+        const matrix = [];
+        const costs = [];
+        for (let row = 0; row < request.body.board.height; row++) {
+            matrix[row] = [];
+            costs[row] = [];
+            for (let column = 0; column < request.body.board.width; column++) {
+                const w = weight(request, column, row, settings);
+                matrix[row][column] = w > BLOCKED_THRESHOLD ? FREE : BLOCKED;
+                costs[row][column] = 100 - w;
+            }
         }
+        grids[key] = new PF.Grid(request.body.board.width, request.body.board.height, matrix, costs);
     }
-    const grid = new PF.Grid(request.body.board.width, request.body.board.height, matrix, costs);
+    // Searches mutate nodes; the pinned fork's clone also preserves weighted costs.
+    const grid = grids[key].clone();
     const path: Array<[number, number]> = pf.findPath(snake.body[0].x, snake.body[0].y, x, y, grid);
     if (!path || !path.length) {
         return null;
     }
     const direction = pathToDirection(path, snake);
-    if (!direction) {
+    if (!direction || !isFree(request.body, path[1][0], path[1][1], false, snake)) {
         return null;
     }
     return {

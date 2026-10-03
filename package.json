@@ -40,6 +40,7 @@
         "dev": "npm run build && concurrently --kill-others --names SERVER,TYPES,WEB \"tsx watch src/server/index.ts\" \"tsc --watch --preserveWatchOutput\" \"npm run watch:web\"",
         "typecheck": "tsc --noEmit",
         "lint": "eslint src scripts eslint.config.mjs",
-        "test": "npm run build && node --test tests/*.test.mjs"
+        "test": "npm run build && node --test tests/*.test.mjs",
+        "profile:movement": "node scripts/profile-movement.mjs"
     }
 }

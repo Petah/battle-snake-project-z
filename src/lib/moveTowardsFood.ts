@@ -1,6 +1,6 @@
 import { shuffle } from './shuffle';
 import { gridDistance } from './gridDistance';
-import { isFree } from './isFree';
+import { isFree, isHeadThreat } from './isFree';
 import { log } from './log';
 import { BTRequest } from '../types/BTData';
 import { closestFood } from './closestFood';
@@ -17,7 +17,7 @@ export function moveTowardsFood(data: BTRequest) {
     shuffle(options);
     for (const direction of options) {
         const { x, y } = nextPosition(data.you.head, direction);
-        if (isFree(data, x, y) && gridDistance(x, y, closest.food.x, closest.food.y) < closest.distance) {
+        if (isFree(data, x, y) && !isHeadThreat(data, x, y) && gridDistance(x, y, closest.food.x, closest.food.y) < closest.distance) {
             log('moveTowardsFood', direction, data.you.body[0].x, data.you.body[0].y, closest);
             return direction;
         }

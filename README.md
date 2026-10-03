@@ -1,6 +1,6 @@
 # Project Z Battlesnake AI
 
-Ten Battlesnake strategies written in TypeScript for Node.js, migrated to the current Battlesnake API v1. Standard games are the initial target: all ten strategies have completed seeded games against the official Rules CLI. Scoring and collision fixes, dashboard replacement, and alternate map support are tracked in [todo.md](todo.md).
+Ten Battlesnake strategies written in TypeScript for Node.js, migrated to the current Battlesnake API v1. Standard games are the initial target: all ten strategies have completed seeded games against the official Rules CLI. Dashboard replacement and alternate map support are tracked in [todo.md](todo.md).
 
 ## Setup
 
@@ -70,13 +70,13 @@ npm test
 npm start
 ```
 
-`npm test` builds the project and runs the native Node regression suite. It covers API metadata, lifecycle and malformed requests, failed strategies, game isolation, recordings, and direction conversion. `npm run build` recreates `dist/` from `src/` and bundles `src/web.ts` into `debug/bundle.js` with esbuild. `npm run server` is an alias for `npm start` and runs in the foreground. Build before starting the server.
+`npm test` builds the project and runs the native Node regression suite. It covers API metadata, lifecycle and malformed requests, failed strategies, game isolation, recordings, direction conversion, boundary scoring, flood-fill, tail growth, and head collisions. `npm run build` recreates `dist/` from `src/` and bundles `src/web.ts` into `debug/bundle.js` with esbuild. `npm run server` is an alias for `npm start` and runs in the foreground. Build before starting the server.
 
 For deployment, install dependencies and build under Node 24, then start with `SNAKE` and `PORT` configured for your hosting platform. Expose the HTTP endpoint to the Battlesnake engine. Linting reports existing unused-code warnings; TypeScript retains the legacy non-strict mode during the staged migration.
 
 ## API and debugging
 
-`GET /` returns API v1 appearance metadata. `/start`, `/move`, and `/end` validate current request bodies; moves always return a direction, with a fallback when a strategy throws or returns an invalid move. Each game and snake ID gets its own strategy instance and persistent storage; request caches, grid annotations, and logs stay separate from API input. Coordinates use the bottom-left origin (`up` increases `y`).
+`GET /` returns API v1 appearance metadata. `/start`, `/move`, and `/end` validate current request bodies; moves always return a direction, with a fallback when a strategy throws or returns an invalid or unsafe move. Each game and snake ID gets its own strategy instance and persistent storage; request caches, grid annotations, and logs stay separate from API input. Coordinates use the bottom-left origin (`up` increases `y`).
 
 Debugging is opt in:
 
@@ -86,4 +86,6 @@ DEBUG_WEBSOCKETS=true DEBUG_LOGS=true RECORD_GAMES=true npm run dev
 
 WebSockets listen on the HTTP port plus 10000. Recordings default to `games/`; `GAME_DIRECTORY` overrides that directory. Completed games have JSON filenames containing both game and snake IDs. Compressed per-turn snapshots live under `games/<game>/<snake>_<id>/` for the upstream replay viewer. API v1 recordings declare their bottom-left coordinates, while the legacy renderer continues to display old recordings with their original orientation. Run the AngularJS/PHP dashboard separately with `php -S localhost:9000` from the project root, then open `http://localhost:9000/debug/debug.php`. Its replay viewer supports compressed snapshots and older whole-game JSON files. Its engine controls still target the old engine, and the dashboard is awaiting replacement.
 
-These strategies still have known scoring, flood-fill, and collision issues. Hazard maps, wrapped boards, and other alternate rulesets need further strategy work before they are supported.
+Scoring rejects off-board and occupied squares, distinguishes vacating tails from stacked tails, and avoids squares reachable by equal or longer opponents. The server applies the same immediate collision checks to strategy moves and falls back when possible. Flood-fill and weighted grids cache within each request; LookAhead uses a bounded search with static opponent positions. These checks improve immediate safety without guaranteeing survival over future turns.
+
+After building, run `npm run profile:movement` for a repeatable local scoring/pathfinding timing report. Hazard maps, wrapped boards, and other alternate rulesets need further strategy work before they are supported.
