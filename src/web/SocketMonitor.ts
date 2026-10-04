@@ -11,29 +11,45 @@ export class SocketMonitor {
         this.close();
         const generation = this.generation;
         for (const snake of snakes) {
-            if (!snake.websocketUrl) { this.status(snake.name, 'disabled'); continue; }
+            if (!snake.websocketUrl) {
+                this.status(snake.name, 'disabled'); continue;
+            }
+            const url = snake.websocketUrl;
             let attempt = 0;
             const connect = () => {
-                if (generation !== this.generation) return;
+                if (generation !== this.generation) {
+                    return;
+                }
                 let socket: WebSocket;
-                try { socket = new WebSocket(snake.websocketUrl); }
-                catch { this.status(snake.name, 'disabled'); return; }
+                try {
+                    socket = new WebSocket(url);
+                } catch {
+                    this.status(snake.name, 'disabled'); return;
+                }
                 this.sockets.push(socket);
                 this.status(snake.name, 'retrying');
-                socket.onopen = () => { attempt = 0; this.status(snake.name, 'connected'); };
+                socket.onopen = () => {
+                    attempt = 0; this.status(snake.name, 'connected');
+                };
                 socket.onmessage = event => {
                     try {
                         const message = JSON.parse(event.data);
                         const frame = normalizeFrame(message.data?.body);
-                        if (frame) this.frame(frame, snake.name);
+                        if (frame) {
+                            this.frame(frame, snake.name);
+                        }
                     } catch { /* Bad debug frames must not interrupt replay controls. */ }
                 };
                 socket.onerror = () => socket.close();
                 socket.onclose = () => {
                     this.sockets = this.sockets.filter(item => item !== socket);
-                    if (generation !== this.generation) return;
+                    if (generation !== this.generation) {
+                        return;
+                    }
                     this.status(snake.name, 'retrying');
-                    const timer = setTimeout(() => { this.timers.delete(timer); connect(); }, Math.min(30000, 1000 * 2 ** attempt++));
+                    const timer = setTimeout(() => {
+                        this.timers.delete(timer); connect();
+                    }, Math.min(30000, 1000 * 2 ** attempt++));
                     this.timers.add(timer);
                 };
             };
@@ -42,9 +58,13 @@ export class SocketMonitor {
     }
     close() {
         this.generation++;
-        for (const timer of this.timers) clearTimeout(timer);
+        for (const timer of this.timers) {
+            clearTimeout(timer);
+        }
         this.timers.clear();
-        for (const socket of this.sockets) { socket.onclose = null; socket.onmessage = null; socket.onopen = null; socket.onerror = null; socket.close(); }
+        for (const socket of this.sockets) {
+            socket.onclose = null; socket.onmessage = null; socket.onopen = null; socket.onerror = null; socket.close();
+        }
         this.sockets = [];
     }
 }

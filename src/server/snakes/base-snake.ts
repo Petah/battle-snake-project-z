@@ -29,7 +29,7 @@ export abstract class BaseSnake {
         this.info.name = this.name;
     }
 
-    public start(request: StrategyRequest): void {
+    public start(_request: StrategyRequest): void {
     }
 
     public move(request: StrategyRequest): ServerMoveResponse | null {

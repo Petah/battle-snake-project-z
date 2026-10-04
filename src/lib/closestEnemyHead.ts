@@ -1,4 +1,4 @@
-import { BTRequest, BTSnake, StrategyRequest } from '../types/BTData';
+import { BTSnake, StrategyRequest } from '../types/BTData';
 import { Path, pathTo } from './Pather';
 import { isEnemy } from './isEnemy';
 import { MoveDirection } from '../types/MoveDirection';

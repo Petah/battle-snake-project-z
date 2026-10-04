@@ -8,7 +8,6 @@ import { smartRandomMove } from '../../lib/smartRandomMove';
 import { moveAway } from '../../lib/moveAway';
 import { BaseSnake, StateFunction } from './base-snake';
 import { ISnake } from './snake-interface';
-import { ServerMoveResponse } from '../Server';
 import { MoveDirection } from '../../types/MoveDirection';
 
 export class ProjectZ extends BaseSnake implements ISnake {

@@ -1,5 +1,4 @@
-import { log } from './log';
-import { BTRequest, StrategyRequest } from '../types/BTData';
+import { StrategyRequest } from '../types/BTData';
 import { pathTo } from './Pather';
 import { MoveDirection } from '../types/MoveDirection';
 

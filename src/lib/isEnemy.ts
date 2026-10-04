@@ -6,7 +6,6 @@ const mySnakes = [
     'keepaway',
     'lookahead',
     'projectz',
-    'projectz2',
     'rando',
     'tailchase',
     'tak',

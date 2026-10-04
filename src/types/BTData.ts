@@ -71,12 +71,22 @@ export class StrategyRequest {
             Array.from({ length: body.board.width }, () => ({})));
     }
 
-    get game() { return this.body.game; }
-    get turn() { return this.body.turn; }
-    get board() { return this.body.board; }
-    get you() { return this.body.you; }
+    get game() {
+        return this.body.game;
+    }
+    get turn() {
+        return this.body.turn;
+    }
+    get board() {
+        return this.body.board;
+    }
+    get you() {
+        return this.body.you;
+    }
 
-    log(...args: any[]) { this.logs.push(args); }
+    log(...args: any[]) {
+        this.logs.push(args);
+    }
 }
 
 export interface BTData extends BTRequest {

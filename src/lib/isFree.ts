@@ -18,11 +18,15 @@ export function boardSnakes(data: BTRequest): BTSnake[] {
 export function occupiedSquares(data: BTRequest, ignoreEnemyHeads = false, perspective = data.you): Set<string> {
     const occupied = new Set<string>();
     for (const snake of boardSnakes(data)) {
-        if (allowsBodyCollision(data, snake, perspective)) continue;
+        if (allowsBodyCollision(data, snake, perspective)) {
+            continue;
+        }
         // Movement removes exactly one final segment before collision checks.
         // A duplicated tail is still occupied by its penultimate segment.
         for (let index = 0; index < snake.body.length - 1; index++) {
-            if (ignoreEnemyHeads && index === 0 && snake.id !== perspective.id) continue;
+            if (ignoreEnemyHeads && index === 0 && snake.id !== perspective.id) {
+                continue;
+            }
             const part = snake.body[index];
             occupied.add(`${part.x}:${part.y}`);
         }
@@ -31,12 +35,20 @@ export function occupiedSquares(data: BTRequest, ignoreEnemyHeads = false, persp
 }
 
 export function isFree(data: BTRequest, x: number, y: number, ignoreEnemyHeads = false, perspective = data.you) {
-    if (isOutOfBounds(data, x, y)) return false;
+    if (isOutOfBounds(data, x, y)) {
+        return false;
+    }
     for (const snake of boardSnakes(data)) {
-        if (allowsBodyCollision(data, snake, perspective)) continue;
+        if (allowsBodyCollision(data, snake, perspective)) {
+            continue;
+        }
         for (let index = 0; index < snake.body.length - 1; index++) {
-            if (ignoreEnemyHeads && index === 0 && snake.id !== perspective.id) continue;
-            if (snake.body[index].x === x && snake.body[index].y === y) return false;
+            if (ignoreEnemyHeads && index === 0 && snake.id !== perspective.id) {
+                continue;
+            }
+            if (snake.body[index].x === x && snake.body[index].y === y) {
+                return false;
+            }
         }
     }
     return true;

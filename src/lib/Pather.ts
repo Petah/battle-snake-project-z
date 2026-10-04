@@ -21,7 +21,9 @@ export interface Path {
 }
 
 export function pathTo(request: StrategyRequest, snake: BTSnake, x: number, y: number, weightOptions: WeightOptions = { blockHeads: true, attackHeads: true }): Path | null {
-    if (isOutOfBounds(request.body, x, y) || isOutOfBounds(request.body, snake.head.x, snake.head.y)) return null;
+    if (isOutOfBounds(request.body, x, y) || isOutOfBounds(request.body, snake.head.x, snake.head.y)) {
+        return null;
+    }
     const settings = { borders: true, snakeBodies: true, deadEnds: true, avoidFood: false, ...weightOptions };
     const key = JSON.stringify(settings);
     const grids = request.cache.pathfindingGrids ??= {};
@@ -62,6 +64,10 @@ export function pathToDirection(path: Array<[number, number]>, snake: BTSnake): 
 
 export class Pather {
     constructor(private data: StrategyRequest) {}
-    pathDirection(x: number, y: number) { return pathTo(this.data, this.data.you, x, y)?.direction; }
-    pathToDirection(path: Array<[number, number]>) { return pathToDirection(path, this.data.you); }
+    pathDirection(x: number, y: number) {
+        return pathTo(this.data, this.data.you, x, y)?.direction;
+    }
+    pathToDirection(path: Array<[number, number]>) {
+        return pathToDirection(path, this.data.you);
+    }
 }

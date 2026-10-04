@@ -4,12 +4,16 @@ import { DashboardServer } from './DashboardServer';
 import type { SnakeEndpoint } from '../shared/dashboard';
 
 const port = Number(process.env.DASHBOARD_PORT ?? 9000);
-if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('DASHBOARD_PORT must be an integer from 1 to 65535.');
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('DASHBOARD_PORT must be an integer from 1 to 65535.');
+}
 const localCli = path.resolve(__dirname, '../../battlesnake');
 let snakes: SnakeEndpoint[] | undefined;
 if (process.env.DASHBOARD_SNAKES) {
     snakes = JSON.parse(process.env.DASHBOARD_SNAKES);
-    if (!Array.isArray(snakes) || snakes.some(snake => !snake?.name || !snake?.url)) throw new Error('DASHBOARD_SNAKES must be a JSON array of { name, url, websocketUrl? }.');
+    if (!Array.isArray(snakes) || snakes.some(snake => !snake?.name || !snake?.url)) {
+        throw new Error('DASHBOARD_SNAKES must be a JSON array of { name, url, websocketUrl? }.');
+    }
 }
 const retentionEnabled = process.env.NODE_ENV === 'production' || process.env.RECORDING_RETENTION_DAYS !== undefined || process.env.RECORDING_MAX_BYTES !== undefined;
 const retention = retentionEnabled ? {
@@ -24,6 +28,10 @@ const dashboard = new DashboardServer(port, {
     evaluationDirectory: process.env.EVALUATION_DIRECTORY, retention, cli: process.env.BATTLESNAKE_CLI ?? (existsSync(localCli) ? localCli : 'battlesnake'), snakes,
 });
 let closing = false;
-async function close() { if (closing) return; closing = true; await dashboard.close(); }
+async function close() {
+    if (closing) {
+        return;
+    } closing = true; await dashboard.close();
+}
 process.once('SIGINT', close);
 process.once('SIGTERM', close);

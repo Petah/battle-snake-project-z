@@ -1,14 +1,9 @@
-import { log } from './log';
 import { StrategyRequest, BTXY, BTSnake } from '../types/BTData';
 import { weight, WeightOptions } from './weight';
 import { MoveDirection } from '../types/MoveDirection';
 import { isSquad } from './isEnemy';
-import { pathTo, Path } from './Pather';
+import { pathTo } from './Pather';
 import { idToInt } from './idToInt';
-
-interface Distance {
-    [snakeId: string]: Path,
-}
 
 interface Sorted {
     food: BTXY,

@@ -5,10 +5,14 @@ import { cache } from './cache';
 export const BLOCKED_THRESHOLD = 10;
 
 export function floodFill(request: StrategyRequest, x: number, y: number) {
-    if (isOutOfBounds(request.body, x, y)) return 0;
+    if (isOutOfBounds(request.body, x, y)) {
+        return 0;
+    }
     const counts = cache(request, 'floodFill', {});
     const key = `${x}:${y}`;
-    if (counts[key] !== undefined) return counts[key];
+    if (counts[key] !== undefined) {
+        return counts[key];
+    }
     return floodFillCache(request, x, y);
 }
 
@@ -29,12 +33,16 @@ export function floodFillCache(request: StrategyRequest, x: number, y: number) {
             { x: node.x, y: node.y + 1 }, { x: node.x, y: node.y - 1 },
         ]) {
             const key = `${next.x}:${next.y}`;
-            if (isOutOfBounds(request.body, next.x, next.y) || occupied.has(key) || visited.has(key)) continue;
+            if (isOutOfBounds(request.body, next.x, next.y) || occupied.has(key) || visited.has(key)) {
+                continue;
+            }
             visited.add(key);
             nodes.push(next);
         }
     }
-    for (const key of visited) counts[key] = nodes.length;
+    for (const key of visited) {
+        counts[key] = nodes.length;
+    }
     return nodes.length;
 }
 
@@ -48,7 +56,9 @@ export interface WeightOptions {
 }
 
 export function weight(request: StrategyRequest, x: number, y: number, options: WeightOptions): number {
-    if (isOutOfBounds(request.body, x, y)) return 0;
+    if (isOutOfBounds(request.body, x, y)) {
+        return 0;
+    }
     const settings = { borders: true, snakeBodies: true, deadEnds: true, avoidFood: false, ...options };
     const result = computeWeight(request, x, y, settings);
     request.grid[y][x].weight = result;
@@ -58,9 +68,15 @@ export function weight(request: StrategyRequest, x: number, y: number, options: 
 }
 
 function computeWeight(request: StrategyRequest, x: number, y: number, options: WeightOptions): number {
-    if (!isFree(request.body, x, y, !options.blockHeads)) return 0;
-    if (options.attackHeads && isHeadThreat(request.body, x, y)) return 0;
-    if (request.body.board.hazards.some(hazard => hazard.x === x && hazard.y === y)) return 5;
+    if (!isFree(request.body, x, y, !options.blockHeads)) {
+        return 0;
+    }
+    if (options.attackHeads && isHeadThreat(request.body, x, y)) {
+        return 0;
+    }
+    if (request.body.board.hazards.some(hazard => hazard.x === x && hazard.y === y)) {
+        return 5;
+    }
     let result = 100;
     if (options.avoidFood) {
         if (isFood(request.body, x, y)) {

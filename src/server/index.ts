@@ -20,19 +20,27 @@ let selected = registered;
 if (process.env.SNAKE || process.env.PORT) {
     const name = process.env.SNAKE ?? 'ProjectZ';
     selected = registered.filter(([port, SnakeType]) => port === name || SnakeType.name.toLowerCase() === name.toLowerCase());
-    if (!selected.length) throw new Error(`Unknown SNAKE "${name}". Choose ${registered.map(([, SnakeType]) => SnakeType.name).join(', ')}.`);
+    if (!selected.length) {
+        throw new Error(`Unknown SNAKE "${name}". Choose ${registered.map(([, SnakeType]) => SnakeType.name).join(', ')}.`);
+    }
 }
 
 const servers = selected.map(([defaultPort, SnakeType]) => {
     const port = Number(process.env.PORT ?? defaultPort);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be an integer from 1 to 65535.');
-    if (options.debugWebSockets && port > 55535) throw new Error('PORT must be at most 55535 when DEBUG_WEBSOCKETS=true.');
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        throw new Error('PORT must be an integer from 1 to 65535.');
+    }
+    if (options.debugWebSockets && port > 55535) {
+        throw new Error('PORT must be at most 55535 when DEBUG_WEBSOCKETS=true.');
+    }
     return new Server(port, () => new SnakeType(), options);
 });
 
 let shuttingDown = false;
 async function shutdown() {
-    if (shuttingDown) return;
+    if (shuttingDown) {
+        return;
+    }
     shuttingDown = true;
     await Promise.all(servers.map(server => server.close()));
 }

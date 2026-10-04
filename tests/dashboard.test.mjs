@@ -12,6 +12,18 @@ const { DashboardServer } = require('../dist/dashboard/DashboardServer.js');
 const { RecordingStore } = require('../dist/dashboard/RecordingStore.js');
 const { validateMatch, MatchManager } = require('../dist/dashboard/MatchManager.js');
 
+test('dashboard endpoints match registered server ports, including gaps in the roster', () => {
+    const { defaultSnakes } = require('../dist/shared/dashboard.js');
+    const { default: registry } = require('../dist/server/snakes.js');
+    assert.deepEqual(defaultSnakes.map(snake => snake.name), Object.values(registry).map(Snake => Snake.name));
+    for (const [port, Snake] of Object.entries(registry)) {
+        const endpoint = defaultSnakes.find(snake => snake.name === Snake.name);
+        assert.equal(new URL(endpoint.url).port, port);
+        assert.equal(new URL(endpoint.websocketUrl).port, String(Number(port) + 10000));
+        assert.equal(new Snake().port, Number(port));
+    }
+});
+
 async function directory(t) {
     const dir = await mkdtemp(join(tmpdir(), 'project-z-dashboard-'));
     t.after(() => rm(dir, { recursive: true, force: true })); return await realpath(dir);
@@ -48,11 +60,16 @@ test('recording store reads legacy JSON, current gzip snapshots, and CLI replays
     await assert.rejects(protectedStore.delete(store.id('match.jsonl')), error => error.status === 409);
 });
 
-test('dashboard serves native assets, analyzes boards, and rejects cross-site, foreign-host and invalid requests', async t => {
+test('dashboard serves SvelteKit assets with bootstrap hashes, analyzes boards, and rejects cross-site, foreign-host and invalid requests', async t => {
     const dir = await directory(t); await writeFile(join(dir, 'game.json'), JSON.stringify(fixture()));
     const { request, base } = await dashboard(t, { directory: dir, cli: '/missing/cli' });
-    const page = await request('/'); assert.equal(page.status, 200); assert.match(await page.text(), /Start match/); assert.match(page.headers.get('content-security-policy'), /script-src 'self'/);
-    assert.equal((await request('/bundle.js')).status, 200);
+    const page = await request('/'); assert.equal(page.status, 200);
+    const html = await page.text(); assert.match(html, /Start match/);
+    const csp = page.headers.get('content-security-policy');
+    assert.match(csp, /script-src 'self'/); assert.match(csp, /'sha256-/); assert.doesNotMatch(csp, /unsafe-inline/);
+    assert.match(csp, /style-src-attr 'unsafe-hashes' 'sha256-/);
+    const asset = html.match(/(?:\.\/|\/)_app\/immutable\/[^" ]+\.js/)[0];
+    assert.equal((await request(new URL(asset, base).pathname)).status, 200);
     const config = await (await request('/api/config')).json(); assert.equal(config.cliAvailable, false);
     assert.deepEqual(config.snakes.map(snake => snake.name), Object.values(require('../dist/server/snakes.js').default).map(Snake => Snake.name));
     const [recording] = await (await request('/api/recordings')).json();

@@ -1,7 +1,0 @@
-flood fill to check for way out
-look ahead a few moves
-target the head if longer
-try to move to the space furtherest away from everything
-
-check available space in a confined area, and avoid it if its smaller that the snake
-create and start games in angular app

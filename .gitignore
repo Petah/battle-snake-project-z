@@ -10,8 +10,6 @@ coverage
 build/Release
 node_modules
 npm-debug.log
-debug/bundle.js
-debug/bundle.js.map
 dist/**/*.js
 dist/**/*.js.map
 engine
@@ -27,3 +25,7 @@ games/**/*.jsonl
 
 # Local evaluation reports and optional replays
 /evaluations/
+
+# SvelteKit dashboard build output
+/ui/.svelte-kit/
+/dashboard-dist/

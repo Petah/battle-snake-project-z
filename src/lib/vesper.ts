@@ -35,7 +35,9 @@ export function vesperBoard(data: BTRequest): VesperBoard {
     const { width, height } = data.board;
     const encode = (point: { x: number; y: number }) => point.y * width + point.x;
     const hazards = new Map<number, number>();
-    for (const point of data.board.hazards) hazards.set(encode(point), (hazards.get(encode(point)) ?? 0) + 1);
+    for (const point of data.board.hazards) {
+        hazards.set(encode(point), (hazards.get(encode(point)) ?? 0) + 1);
+    }
     const convert = (value: BTSnake): Snake => ({ id: value.id, health: value.health, body: value.body.map(encode) });
     const others = data.board.snakes.filter(snake => snake.id !== data.you.id);
     const neighbors = Array.from({ length: width * height }, (_, cell) => {
@@ -61,7 +63,9 @@ export function clearance(board: VesperBoard): Int16Array {
         const length = snake.body.length;
         for (let index = 0; index < length; index++) {
             const cell = snake.body[index], turns = length - index;
-            if (turns > clear[cell]) clear[cell] = turns;
+            if (turns > clear[cell]) {
+                clear[cell] = turns;
+            }
         }
     }
     return clear;
@@ -69,7 +73,9 @@ export function clearance(board: VesperBoard): Int16Array {
 
 function legalMoves(board: VesperBoard, snake: Snake, clear = clearance(board)): MoveDirection[] {
     const cells = board.neighbors[snake.body[0]];
-    return directions.filter(direction => { const cell = cells[directionIndex[direction]]; return cell >= 0 && clear[cell] <= 1; });
+    return directions.filter(direction => {
+        const cell = cells[directionIndex[direction]]; return cell >= 0 && clear[cell] <= 1;
+    });
 }
 
 // Standard rules: move, feed, starve, then resolve collisions simultaneously.
@@ -79,7 +85,9 @@ export function vesperStep(board: VesperBoard, moves: MoveDirection[]): VesperBo
         const head = neighbor(board, snake.body[0], moves[index]);
         const body = [head, ...snake.body.slice(0, -1)];
         const ate = head >= 0 && board.food.has(head);
-        if (ate) { body.push(body[body.length - 1]); (eaten ??= new Set()).add(head); }
+        if (ate) {
+            body.push(body[body.length - 1]); (eaten ??= new Set()).add(head);
+        }
         const health = ate ? 100 : snake.health - 1 - (head >= 0 ? (board.hazards.get(head) ?? 0) * board.hazardDamage : 0);
         return { id: snake.id, body, health };
     });
@@ -101,7 +109,9 @@ export function distances(board: VesperBoard, snake: Snake, clear: Int16Array): 
     for (let index = 0; index < count; index++) {
         const cell = queue[index], arrival = distance[cell] + 1;
         for (const next of board.neighbors[cell]) {
-            if (next < 0 || distance[next] >= 0 || clear[next] > arrival) continue;
+            if (next < 0 || distance[next] >= 0 || clear[next] > arrival) {
+                continue;
+            }
             distance[next] = arrival; queue[count++] = next;
         }
     }
@@ -110,7 +120,9 @@ export function distances(board: VesperBoard, snake: Snake, clear: Int16Array): 
 
 export function evaluate(board: VesperBoard, id: string, depth = 0): number {
     const you = board.snakes.find(snake => snake.id === id);
-    if (!you) return board.snakes.length ? LOSS - depth : LOSS / 2;
+    if (!you) {
+        return board.snakes.length ? LOSS - depth : LOSS / 2;
+    }
     const enemies = board.snakes.filter(snake => snake !== you);
     const clear = clearance(board);
     const own = distances(board, you, clear);
@@ -123,17 +135,29 @@ export function evaluate(board: VesperBoard, id: string, depth = 0): number {
         let theirDistance = Infinity, theirLength = 0;
         for (let index = 0; index < enemies.length; index++) {
             const d = rivals[index][cell];
-            if (d < 0) continue;
+            if (d < 0) {
+                continue;
+            }
             enemyArea[index]++;
-            if (d < theirDistance || (d === theirDistance && enemies[index].body.length > theirLength)) { theirDistance = d; theirLength = enemies[index].body.length; }
+            if (d < theirDistance || (d === theirDistance && enemies[index].body.length > theirLength)) {
+                theirDistance = d; theirLength = enemies[index].body.length;
+            }
         }
-        if (own[cell] < 0) { if (theirDistance < Infinity) enemyTerritory++; continue; }
+        if (own[cell] < 0) {
+            if (theirDistance < Infinity) {
+                enemyTerritory++;
+            } continue;
+        }
         area++;
         const controlled = own[cell] < theirDistance || (own[cell] === theirDistance && length > theirLength);
         if (controlled) {
             territory++;
-            if (board.food.has(cell) && own[cell] < foodDistance) foodDistance = own[cell];
-        } else if (theirDistance < own[cell] || theirLength > length) enemyTerritory++;
+            if (board.food.has(cell) && own[cell] < foodDistance) {
+                foodDistance = own[cell];
+            }
+        } else if (theirDistance < own[cell] || theirLength > length) {
+            enemyTerritory++;
+        }
     }
 
     const longest = Math.max(0, ...enemies.map(enemy => enemy.body.length));
@@ -156,10 +180,15 @@ export function evaluate(board: VesperBoard, id: string, depth = 0): number {
 
     // Food: urgency rises as health falls or when we are not comfortably longest.
     let hunger = 35;
-    if (you.health < 30) hunger = 260;
-    else if (you.health < 55) hunger = 150;
-    else if (lead < 2) hunger = 150;
-    else if (lead < 4) hunger = 70;
+    if (you.health < 30) {
+        hunger = 260;
+    } else if (you.health < 55) {
+        hunger = 150;
+    } else if (lead < 2) {
+        hunger = 150;
+    } else if (lead < 4) {
+        hunger = 70;
+    }
     const foodScore = Number.isFinite(foodDistance) ? hunger / (foodDistance + 1) : 0;
     const starving = Number.isFinite(foodDistance)
         ? (foodDistance >= you.health ? (you.health < 20 ? 600 : 150) : 0)
@@ -171,7 +200,9 @@ export function evaluate(board: VesperBoard, id: string, depth = 0): number {
     // Mobility: our options are worth keeping, and theirs are worth taking when we can press.
     const mobility = legalMoves(board, you, clear).length;
     let rivalMobility = 0;
-    for (const enemy of enemies) rivalMobility += legalMoves(board, enemy, clear).length;
+    for (const enemy of enemies) {
+        rivalMobility += legalMoves(board, enemy, clear).length;
+    }
     const mobilityScore = mobility * 10 - rivalMobility * (lead >= 0 ? 12 : 4);
 
     // Mild centre preference to avoid wall hugging.
@@ -195,9 +226,15 @@ export function vesperMove(data: BTRequest): VesperResult {
     const deadline = started + budget;
     const board = vesperBoard(data), id = data.you.id;
 
-    const legal = directions.filter(direction => { const p = nextPosition(data.you.head, direction); return isFree(data, p.x, p.y); });
-    if (!legal.length) return { move: fallbackMove(data), depth: 0, nodes: 0, value: LOSS };
-    if (legal.length === 1) return { move: legal[0], depth: 0, nodes: 0, value: 0 };
+    const legal = directions.filter(direction => {
+        const p = nextPosition(data.you.head, direction); return isFree(data, p.x, p.y);
+    });
+    if (!legal.length) {
+        return { move: fallbackMove(data), depth: 0, nodes: 0, value: LOSS };
+    }
+    if (legal.length === 1) {
+        return { move: legal[0], depth: 0, nodes: 0, value: 0 };
+    }
 
     const you = board.snakes[0];
     const enemies = board.snakes.slice(1);
@@ -213,14 +250,26 @@ export function vesperMove(data: BTRequest): VesperResult {
     // then food, then the number of exits from the destination.
     const order = (state: VesperBoard, snake: Snake, clear: Int16Array, preferred?: MoveDirection): MoveDirection[] => {
         const moves = legalMoves(state, snake, clear);
-        if (moves.length < 2) return moves;
+        if (moves.length < 2) {
+            return moves;
+        }
         const value = (move: MoveDirection) => {
-            if (move === preferred) return 10000;
+            if (move === preferred) {
+                return 10000;
+            }
             const cell = state.neighbors[snake.body[0]][directionIndex[move]];
             let food = Infinity;
-            for (const target of state.food) { const d = manhattan(cell, target); if (d < food) food = d; }
+            for (const target of state.food) {
+                const d = manhattan(cell, target); if (d < food) {
+                    food = d;
+                }
+            }
             let exits = 0;
-            for (const next of state.neighbors[cell]) if (next >= 0 && clear[next] <= 2) exits++;
+            for (const next of state.neighbors[cell]) {
+                if (next >= 0 && clear[next] <= 2) {
+                    exits++;
+                }
+            }
             return (state.food.has(cell) ? 100 : 0) + 20 / (food + 1) + exits * 3;
         };
         return moves.map(move => ({ move, value: value(move) })).sort((a, b) => b.value - a.value).map(item => item.move);
@@ -234,36 +283,61 @@ export function vesperMove(data: BTRequest): VesperResult {
     const key = (state: VesperBoard) => state.snakes.map(s => `${s.health}:${s.body.join(',')}`).join('|') + '/' + [...state.food].join(',');
 
     const search = (state: VesperBoard, depth: number, alpha: number, beta: number): number => {
-        if (performance.now() >= deadline) throw expired;
+        if (performance.now() >= deadline) {
+            throw expired;
+        }
         nodes++;
         const me = state.snakes.find(snake => snake.id === id);
-        if (!me) return LOSS - depth;
-        if (state.snakes.length === 1 && enemies.length) return WIN + depth;
+        if (!me) {
+            return LOSS - depth;
+        }
+        if (state.snakes.length === 1 && enemies.length) {
+            return WIN + depth;
+        }
         const position = key(state), cached = table.get(position), originalAlpha = alpha, originalBeta = beta;
         if (cached && cached.depth >= depth) {
-            if (cached.bound === 'exact') return cached.value;
-            if (cached.bound === 'lower') alpha = Math.max(alpha, cached.value);
-            else beta = Math.min(beta, cached.value);
-            if (alpha >= beta) return cached.value;
+            if (cached.bound === 'exact') {
+                return cached.value;
+            }
+            if (cached.bound === 'lower') {
+                alpha = Math.max(alpha, cached.value);
+            } else {
+                beta = Math.min(beta, cached.value);
+            }
+            if (alpha >= beta) {
+                return cached.value;
+            }
         }
         if (depth === 0) {
             const value = evaluate(state, id, depth);
-            if (table.size < 30000) table.set(position, { depth, value, bound: 'exact' });
+            if (table.size < 30000) {
+                table.set(position, { depth, value, bound: 'exact' });
+            }
             return value;
         }
         const clear = clearance(state);
         const myMoves = order(state, me, clear, cached?.move);
-        if (!myMoves.length) return LOSS - depth + 1;
+        if (!myMoves.length) {
+            return LOSS - depth + 1;
+        }
         const foe = rival ? state.snakes.find(snake => snake.id === rival.id) : undefined;
         let best = -Infinity, bestMove = myMoves[0];
         for (const move of myMoves) {
             const value = foe ? reply(state, me, foe, move, depth, alpha, beta, clear) : advance(state, me, undefined, move, undefined, depth, alpha, beta, clear);
-            if (value > best) { best = value; bestMove = move; }
-            if (best > alpha) alpha = best;
-            if (alpha >= beta) break;
+            if (value > best) {
+                best = value; bestMove = move;
+            }
+            if (best > alpha) {
+                alpha = best;
+            }
+            if (alpha >= beta) {
+                break;
+            }
         }
-        if (table.size < 30000) table.set(position, { depth, value: best, move: bestMove,
-            bound: best <= originalAlpha ? 'upper' : best >= originalBeta ? 'lower' : 'exact' });
+        if (table.size < 30000) {
+            table.set(position, { depth, value: best, move: bestMove,
+                bound: best <= originalAlpha ? 'upper' : best >= originalBeta ? 'lower' : 'exact' });
+        }
         return best;
     };
 
@@ -273,9 +347,15 @@ export function vesperMove(data: BTRequest): VesperResult {
         // A trapped rival still moves; include every direction so simultaneous deaths resolve correctly.
         for (const response of responses.length ? responses : directions) {
             const value = advance(state, me, foe, move, response, depth, alpha, beta, clear);
-            if (value < worst) worst = value;
-            if (worst < beta) beta = worst;
-            if (alpha >= beta) break;
+            if (value < worst) {
+                worst = value;
+            }
+            if (worst < beta) {
+                beta = worst;
+            }
+            if (alpha >= beta) {
+                break;
+            }
         }
         return worst;
     };
@@ -286,7 +366,9 @@ export function vesperMove(data: BTRequest): VesperResult {
     };
 
     // Root: evaluate each legal move against the rival's best reply, deepening while time remains.
-    const safe = legal.filter(direction => { const p = nextPosition(data.you.head, direction); return !isHeadThreat(data, p.x, p.y); });
+    const safe = legal.filter(direction => {
+        const p = nextPosition(data.you.head, direction); return !isHeadThreat(data, p.x, p.y);
+    });
     let ordered = [...legal].sort((a, b) => Number(safe.includes(b)) - Number(safe.includes(a)));
     let best = ordered[0], bestValue = -Infinity, completedDepth = 0;
     const rootClear = clearance(board);
@@ -299,17 +381,23 @@ export function vesperMove(data: BTRequest): VesperResult {
                 const foe = rival ? board.snakes.find(snake => snake.id === rival.id) : undefined;
                 const value = foe ? reply(board, you, foe, move, depth, alpha, Infinity, rootClear) : advance(board, you, undefined, move, undefined, depth, alpha, Infinity, rootClear);
                 scores.push({ move, value });
-                if (value > alpha) alpha = value;
+                if (value > alpha) {
+                    alpha = value;
+                }
             }
         } catch (error) {
-            if (error !== expired) throw error;
+            if (error !== expired) {
+                throw error;
+            }
             break;
         }
         scores.sort((a, b) => b.value - a.value);
         ordered = scores.map(score => score.move);
         best = scores[0].move; bestValue = scores[0].value; completedDepth = depth;
         // A forced win or an unavoidable loss will not change with more depth.
-        if (bestValue >= WIN || bestValue <= LOSS) break;
+        if (bestValue >= WIN || bestValue <= LOSS) {
+            break;
+        }
     }
     return { move: best, depth: completedDepth, nodes, value: bestValue };
 }

@@ -5,7 +5,9 @@ const time = new Date().getTime();
 
 async function fetchData(url) {
     const result = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!result.ok) throw new Error(`HTTP ${result.status} fetching ${url}`);
+    if (!result.ok) {
+        throw new Error(`HTTP ${result.status} fetching ${url}`);
+    }
     return cheerio.load(await result.text());
 }
 

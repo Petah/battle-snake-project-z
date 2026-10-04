@@ -111,13 +111,17 @@ export class Server {
                     move: position && isFree(requestData, position.x, position.y) && !isHeadThreat(requestData, position.x, position.y)
                         ? result.move as MoveDirection : fallbackMove(requestData),
                 };
-                if (typeof result?.shout === 'string') move.shout = result.shout.slice(0, 256);
+                if (typeof result?.shout === 'string') {
+                    move.shout = result.shout.slice(0, 256);
+                }
                 log('moveResponse', move);
                 if (game?.recording && context) {
                     context.log('moveResponse', move);
                     this.recordTurn(game.snake, 'move', context);
                 }
-                if (game?.recording) game.recording.moves[requestData.turn] = structuredClone(requestData);
+                if (game?.recording) {
+                    game.recording.moves[requestData.turn] = structuredClone(requestData);
+                }
                 this.broadcast('move', game?.snake ?? this.template, requestData);
                 response.json(move);
             } catch (error) {

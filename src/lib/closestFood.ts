@@ -1,5 +1,4 @@
 import { gridDistance } from './gridDistance';
-import { log } from './log';
 import { BTXY, BTRequest } from '../types/BTData';
 
 interface Closest {

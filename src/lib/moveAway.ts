@@ -1,8 +1,4 @@
-import { isFree } from './isFree';
-import { log } from './log';
-import { BTRequest, BTSnake, StrategyRequest } from '../types/BTData';
-import { MoveDirection } from '../types/MoveDirection';
-import { shuffle } from './shuffle';
+import { StrategyRequest } from '../types/BTData';
 import { gridDistance } from './gridDistance';
 import { pathTo } from './Pather';
 

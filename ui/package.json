@@ -1,0 +1,8 @@
+{
+    "name": "battlesnake-dashboard",
+    "private": true,
+    "type": "module",
+    "imports": {
+        "#lib/*": "./src/lib/*"
+    }
+}

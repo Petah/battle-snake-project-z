@@ -8,7 +8,6 @@ import { randomMove } from '../../lib/randomMove';
 import { smartRandomMove } from '../../lib/smartRandomMove';
 import { moveAway } from '../../lib/moveAway';
 import { BaseSnake } from './base-snake';
-import { moveTowardsKill } from '../../lib/moveTowardsKill';
 import { lookAhead } from '../../lib/lookAhead';
 import { ISnake } from './snake-interface';
 import { ServerMoveResponse } from '../Server';

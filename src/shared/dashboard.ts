@@ -1,9 +1,15 @@
 import type { BTRequest } from '../types/BTData';
 
 export interface SnakeEndpoint { name: string; url: string; websocketUrl?: string }
-export const defaultSnakes: SnakeEndpoint[] = [
-    'ProjectZ', 'KeepAway', 'Rando', 'Tak', 'TailChase', 'Aldo', 'Dunno', 'WorkItOut', 'ProjectZ2', 'LookAhead', 'Sentinel', 'Vesper',
-].map((name, index) => ({ name, url: `http://localhost:${9001 + index}`, websocketUrl: `ws://localhost:${19001 + index}` }));
+// Explicit ports preserve endpoint addresses when a strategy is removed.
+const registeredPorts: [string, number][] = [
+    ['ProjectZ', 9001], ['KeepAway', 9002], ['Rando', 9003], ['Tak', 9004],
+    ['TailChase', 9005], ['Aldo', 9006], ['Dunno', 9007], ['WorkItOut', 9008],
+    ['LookAhead', 9010], ['Sentinel', 9011], ['Vesper', 9012],
+];
+export const defaultSnakes: SnakeEndpoint[] = registeredPorts.map(([name, port]) => ({
+    name, url: `http://localhost:${port}`, websocketUrl: `ws://localhost:${port + 10000}`,
+}));
 
 export interface ReplayFrame {
     turn: number;

@@ -12,7 +12,9 @@ const DEAD = -100000;
 export function sentinelBoard(data: BTRequest): SentinelBoard {
     const encode = (point: { x: number; y: number }) => point.y * data.board.width + point.x;
     const hazards = new Map<number, number>();
-    for (const point of data.board.hazards) hazards.set(encode(point), (hazards.get(encode(point)) ?? 0) + 1);
+    for (const point of data.board.hazards) {
+        hazards.set(encode(point), (hazards.get(encode(point)) ?? 0) + 1);
+    }
     const snake = (value: BTSnake): SearchSnake => ({ id: value.id, health: value.health, body: value.body.map(encode) });
     return { width: data.board.width, height: data.board.height, snakes: [snake(data.you), ...data.board.snakes.filter(s => s.id !== data.you.id).map(snake)],
         food: new Set(data.board.food.map(encode)), hazards,
@@ -31,13 +33,17 @@ function next(board: SentinelBoard, head: number, direction: MoveDirection): num
 // handles stacked tails without adding a second, fictitious growth delay.
 export function sentinelClearance(board: SentinelBoard): Int16Array {
     const clear = new Int16Array(board.width * board.height);
-    for (const snake of board.snakes) for (let index = 0; index < snake.body.length; index++) {
-        const cell = snake.body[index]; clear[cell] = Math.max(clear[cell], snake.body.length - index);
+    for (const snake of board.snakes) {
+        for (let index = 0; index < snake.body.length; index++) {
+            const cell = snake.body[index]; clear[cell] = Math.max(clear[cell], snake.body.length - index);
+        }
     }
     return clear;
 }
 function choices(board: SentinelBoard, snake: SearchSnake, clear = sentinelClearance(board)): MoveDirection[] {
-    return directions.filter(direction => { const cell = next(board, snake.body[0], direction); return cell >= 0 && clear[cell] <= 1; });
+    return directions.filter(direction => {
+        const cell = next(board, snake.body[0], direction); return cell >= 0 && clear[cell] <= 1;
+    });
 }
 
 // Standard simultaneous movement, food/growth and collision resolution. No
@@ -48,7 +54,9 @@ export function sentinelStep(board: SentinelBoard, moves: MoveDirection[]): Sent
         const head = next(board, snake.body[0], moves[index]);
         const body = [head, ...snake.body.slice(0, -1)];
         const food = board.food.has(head);
-        if (food) { body.push(body[body.length - 1]); eaten.add(head); }
+        if (food) {
+            body.push(body[body.length - 1]); eaten.add(head);
+        }
         return { id: snake.id, body, health: food ? 100 : snake.health - 1 - (board.hazards.get(head) ?? 0) * board.hazardDamage };
     });
     const alive = moved.filter(snake => snake.body[0] >= 0 && snake.health > 0);
@@ -67,7 +75,9 @@ export function sentinelDistances(board: SentinelBoard, snake: SearchSnake, clea
     for (let index = 0; index < count; index++) {
         const cell = queue[index], arrival = distance[cell] + 1;
         for (const neighbor of board.neighbors[cell]) {
-            if (neighbor < 0 || distance[neighbor] >= 0 || clear[neighbor] > arrival) continue;
+            if (neighbor < 0 || distance[neighbor] >= 0 || clear[neighbor] > arrival) {
+                continue;
+            }
             distance[neighbor] = arrival; queue[count++] = neighbor;
         }
     }
@@ -76,7 +86,9 @@ export function sentinelDistances(board: SentinelBoard, snake: SearchSnake, clea
 
 function score(board: SentinelBoard, id: string): number {
     const you = board.snakes.find(s => s.id === id);
-    if (!you) return board.snakes.length ? DEAD : DEAD / 2;
+    if (!you) {
+        return board.snakes.length ? DEAD : DEAD / 2;
+    }
     const enemies = board.snakes.filter(s => s !== you), clear = sentinelClearance(board);
     const own = sentinelDistances(board, you, clear);
     const rival = enemies.map(enemy => sentinelDistances(board, enemy, clear));
@@ -89,20 +101,31 @@ function score(board: SentinelBoard, id: string): number {
             const d = rival[index][cell];
             if (d >= 0) {
                 rivalArea[index]++;
-                if (board.food.has(cell)) rivalFood[index] = Math.min(rivalFood[index], d);
+                if (board.food.has(cell)) {
+                    rivalFood[index] = Math.min(rivalFood[index], d);
+                }
             }
             if (d >= 0 && (d < theirDistance || (d === theirDistance && enemies[index].body.length > theirLength))) {
                 theirDistance = d; theirLength = enemies[index].body.length;
             }
         }
-        if (own[cell] < 0) { if (theirDistance < Infinity) enemyTerritory++; continue; }
+        if (own[cell] < 0) {
+            if (theirDistance < Infinity) {
+                enemyTerritory++;
+            } continue;
+        }
         area++;
         const controlled = own[cell] < theirDistance || (own[cell] === theirDistance && you.body.length > theirLength);
-        if (controlled) territory++;
-        else if (theirDistance < own[cell] || theirLength > you.body.length) enemyTerritory++;
+        if (controlled) {
+            territory++;
+        } else if (theirDistance < own[cell] || theirLength > you.body.length) {
+            enemyTerritory++;
+        }
         // Food an opponent can claim first is not a reliable health plan.
         // Tactical opportunities to steal it are still explored by search.
-        if (controlled && board.food.has(cell)) foodDistance = Math.min(foodDistance, own[cell]);
+        if (controlled && board.food.has(cell)) {
+            foodDistance = Math.min(foodDistance, own[cell]);
+        }
     }
     const length = you.body.length, largest = Math.max(0, ...enemies.map(enemy => enemy.body.length)), lead = length - largest;
     const deficit = Math.max(0, length + 2 - area);
@@ -121,7 +144,9 @@ function score(board: SentinelBoard, id: string): number {
     for (let index = 0; index < enemies.length; index++) {
         const enemy = enemies[index];
         pressure += Math.min(12, Math.max(0, enemy.body.length + 2 - rivalArea[index])) * 100;
-        if (enemy.health < 20 && rivalFood[index] >= enemy.health) pressure += (20 - enemy.health) * 15;
+        if (enemy.health < 20 && rivalFood[index] >= enemy.health) {
+            pressure += (20 - enemy.health) * 15;
+        }
     }
     return -deficit * 400 + Math.min(area, length * 2 + 8) * 3 + territory * 1.5 - enemyTerritory * 0.9 +
         Math.min(8, lead) * 45 + length * 3 + foodValue + you.health * 0.35 - starving + tail +
@@ -131,25 +156,39 @@ function score(board: SentinelBoard, id: string): number {
 export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: number; nodes: number } {
     const deadline = performance.now() + Math.max(1, Math.min(75, data.game.timeout * 0.2 - 15));
     const board = sentinelBoard(data), id = data.you.id;
-    const legal = directions.filter(direction => { const p = nextPosition(data.you.head, direction); return isFree(data, p.x, p.y); });
-    const safe = legal.filter(direction => { const p = nextPosition(data.you.head, direction); return !isHeadThreat(data, p.x, p.y); });
+    const legal = directions.filter(direction => {
+        const p = nextPosition(data.you.head, direction); return isFree(data, p.x, p.y);
+    });
+    const safe = legal.filter(direction => {
+        const p = nextPosition(data.you.head, direction); return !isHeadThreat(data, p.x, p.y);
+    });
     const candidates = safe.length ? safe : legal;
-    if (!candidates.length) return { move: fallbackMove(data), depth: 0, nodes: 0 };
-    if (candidates.length === 1) return { move: candidates[0], depth: 0, nodes: 0 };
+    if (!candidates.length) {
+        return { move: fallbackMove(data), depth: 0, nodes: 0 };
+    }
+    if (candidates.length === 1) {
+        return { move: candidates[0], depth: 0, nodes: 0 };
+    }
     let nodes = 0;
     // Multi-snake boards use space/territory scoring with conservative head
     // avoidance. Exact joint-move search below is reserved for standard duels.
     const baseline = (direction: MoveDirection) => {
         const you = board.snakes[0], head = next(board, you.body[0], direction), food = board.food.has(head);
-        const body = [head, ...you.body.slice(0, -1)]; if (food) body.push(body[body.length - 1]);
+        const body = [head, ...you.body.slice(0, -1)]; if (food) {
+            body.push(body[body.length - 1]);
+        }
         const health = food ? 100 : you.health - 1 - (board.hazards.get(head) ?? 0) * board.hazardDamage;
-        if (health <= 0) return DEAD;
+        if (health <= 0) {
+            return DEAD;
+        }
         const future = { ...board, snakes: [{ ...you, body, health }, ...board.snakes.slice(1)], food: new Set([...board.food].filter(cell => cell !== head)) };
         return score(future, id);
     };
     const ordered = candidates.map(move => ({ move, value: baseline(move) })).sort((a, b) => b.value - a.value);
     let best = ordered[0].move, completedDepth = 0;
-    if (board.snakes.length !== 2 || data.game.ruleset.name !== 'standard') return { move: best, depth: 0, nodes };
+    if (board.snakes.length !== 2 || data.game.ruleset.name !== 'standard') {
+        return { move: best, depth: 0, nodes };
+    }
     const expired = Symbol('deadline');
     interface Entry { depth: number; value: number; bound: 'exact' | 'upper' | 'lower'; move?: MoveDirection }
     const table = new Map<string, Entry>();
@@ -159,44 +198,71 @@ export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: num
     const key = (state: SentinelBoard) => state.snakes.map(s => `${s.health}:${s.body.join(',')}`).join('|') + '/' + [...state.food].join(',');
     const order = (state: SentinelBoard, snake: SearchSnake, clear: Int16Array, preferred?: MoveDirection) => {
         const value = (move: MoveDirection) => {
-            if (move === preferred) return 10000;
+            if (move === preferred) {
+                return 10000;
+            }
             const cell = next(state, snake.body[0], move);
             let food = Infinity;
-            for (const target of state.food) food = Math.min(food, Math.abs(cell % state.width - target % state.width) + Math.abs(Math.floor(cell / state.width) - Math.floor(target / state.width)));
+            for (const target of state.food) {
+                food = Math.min(food, Math.abs(cell % state.width - target % state.width) + Math.abs(Math.floor(cell / state.width) - Math.floor(target / state.width)));
+            }
             const exits = state.neighbors[cell].filter(n => n >= 0 && clear[n] <= 2).length;
             return (state.food.has(cell) ? 100 : 0) + 20 / (food + 1) + exits * 3;
         };
         return choices(state, snake, clear).map(move => ({ move, value: value(move) })).sort((a, b) => b.value - a.value).map(item => item.move);
     };
     const search = (state: SentinelBoard, depth: number, alpha: number, beta: number): number => {
-        if (performance.now() >= deadline) throw expired;
+        if (performance.now() >= deadline) {
+            throw expired;
+        }
         nodes++;
         const you = state.snakes.find(s => s.id === id);
-        if (!you) return state.snakes.length ? DEAD : DEAD / 2;
-        if (state.snakes.length === 1) return -DEAD;
+        if (!you) {
+            return state.snakes.length ? DEAD : DEAD / 2;
+        }
+        if (state.snakes.length === 1) {
+            return -DEAD;
+        }
         const position = key(state), cached = table.get(position), originalAlpha = alpha, originalBeta = beta;
         if (cached && cached.depth >= depth) {
-            if (cached.bound === 'exact') return cached.value;
-            if (cached.bound === 'lower') alpha = Math.max(alpha, cached.value);
-            else beta = Math.min(beta, cached.value);
-            if (alpha >= beta) return cached.value;
+            if (cached.bound === 'exact') {
+                return cached.value;
+            }
+            if (cached.bound === 'lower') {
+                alpha = Math.max(alpha, cached.value);
+            } else {
+                beta = Math.min(beta, cached.value);
+            }
+            if (alpha >= beta) {
+                return cached.value;
+            }
         }
         if (depth === 0) {
             const value = score(state, id);
-            if (table.size < 20000) table.set(position, { depth, value, bound: 'exact' });
+            if (table.size < 20000) {
+                table.set(position, { depth, value, bound: 'exact' });
+            }
             return value;
         }
         const clear = sentinelClearance(state), moves = order(state, you, clear, cached?.move);
-        if (!moves.length) return DEAD;
+        if (!moves.length) {
+            return DEAD;
+        }
         let bestValue = -Infinity, bestMove = moves[0];
         for (const move of moves) {
             const value = reply(state, move, depth, alpha, beta, clear, position);
-            if (value > bestValue) { bestValue = value; bestMove = move; }
+            if (value > bestValue) {
+                bestValue = value; bestMove = move;
+            }
             alpha = Math.max(alpha, bestValue);
-            if (alpha >= beta) break;
+            if (alpha >= beta) {
+                break;
+            }
         }
-        if (table.size < 20000) table.set(position, { depth, value: bestValue, move: bestMove,
-            bound: bestValue <= originalAlpha ? 'upper' : bestValue >= originalBeta ? 'lower' : 'exact' });
+        if (table.size < 20000) {
+            table.set(position, { depth, value: bestValue, move: bestMove,
+                bound: bestValue <= originalAlpha ? 'upper' : bestValue >= originalBeta ? 'lower' : 'exact' });
+        }
         return bestValue;
     };
     const reply = (state: SentinelBoard, move: MoveDirection, depth: number, alpha: number, beta: number, clear: Int16Array, position: string): number => {
@@ -205,9 +271,13 @@ export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: num
         for (const response of replies.length ? replies : directions) {
             const moves = state.snakes.map(s => s.id === id ? move : response);
             const value = search(sentinelStep(state, moves), depth - 1, alpha, beta);
-            if (value < worst) { worst = value; refutation = response; }
+            if (value < worst) {
+                worst = value; refutation = response;
+            }
             beta = Math.min(beta, worst);
-            if (alpha >= beta) break;
+            if (alpha >= beta) {
+                break;
+            }
         }
         // This stores ordering hints only, never scores or bounds. A response
         // that refuted this move last iteration is a useful first reply now.
@@ -225,12 +295,20 @@ export function sentinelMove(data: BTRequest): { move: MoveDirection; depth: num
             for (const { move } of ordered) {
                 const nextValue = reply(board, move, depth, value, Infinity, clear, rootKey);
                 scores.push({ move, value: nextValue });
-                if (nextValue > value) { value = nextValue; iterationBest = move; }
+                if (nextValue > value) {
+                    value = nextValue; iterationBest = move;
+                }
             }
-        } catch (error) { if (error !== expired) throw error; break; }
+        } catch (error) {
+            if (error !== expired) {
+                throw error;
+            } break;
+        }
         best = iterationBest; completedDepth = depth;
         ordered.splice(0, ordered.length, ...scores.sort((a, b) => b.value - a.value));
-        if (Math.abs(value) >= -DEAD) break;
+        if (Math.abs(value) >= -DEAD) {
+            break;
+        }
     }
     return { move: best, depth: completedDepth, nodes };
 }

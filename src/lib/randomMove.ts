@@ -12,7 +12,9 @@ export function randomMove(data: StrategyRequest) {
         const { x, y } = nextPosition(data.you.head, direction);
         if (isFree(data, x, y)) {
             available ??= direction;
-            if (isHeadThreat(data, x, y)) continue;
+            if (isHeadThreat(data, x, y)) {
+                continue;
+            }
             log('randomMove', direction);
             return direction;
         }

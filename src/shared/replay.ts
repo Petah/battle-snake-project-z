@@ -5,19 +5,29 @@ const object = (value: unknown): value is Record<string, any> => !!value && type
 const point = (value: unknown) => object(value) && Number.isInteger(value.x) && Number.isInteger(value.y);
 
 export function normalizeFrame(value: unknown, origin?: ReplayFrame['origin']): ReplayFrame | undefined {
-    if (!object(value)) return;
+    if (!object(value)) {
+        return;
+    }
     const body = object(value.body) ? value.body : value;
-    if (!object(body.board) || !object(body.game) || !object(body.you)) return;
+    if (!object(body.board) || !object(body.game) || !object(body.you)) {
+        return;
+    }
     const board = body.board;
     if (!Number.isInteger(board.width) || !Number.isInteger(board.height) || board.width < 1 || board.height < 1 || board.width > 256 || board.height > 256 ||
-        !Array.isArray(board.snakes) || !Array.isArray(board.food) || !board.food.every(point) || (!Array.isArray(board.hazards ?? []) || !(board.hazards ?? []).every(point))) return;
+        !Array.isArray(board.snakes) || !Array.isArray(board.food) || !board.food.every(point) || (!Array.isArray(board.hazards ?? []) || !(board.hazards ?? []).every(point))) {
+        return;
+    }
     const normalizeSnake = (snake: unknown) => {
-        if (!object(snake) || typeof snake.id !== 'string' || !Array.isArray(snake.body) || !snake.body.length || !snake.body.every(point)) return;
+        if (!object(snake) || typeof snake.id !== 'string' || !Array.isArray(snake.body) || !snake.body.length || !snake.body.every(point)) {
+            return;
+        }
         return { ...snake, name: String(snake.name ?? snake.id), health: Number.isFinite(Number(snake.health)) ? Number(snake.health) : 0, head: snake.body[0], length: snake.body.length };
     };
     const you = normalizeSnake(body.you);
     const snakes = board.snakes.map(normalizeSnake);
-    if (!you || snakes.some(snake => !snake)) return;
+    if (!you || snakes.some(snake => !snake)) {
+        return;
+    }
     const logs = value.logs ?? body.log ?? [];
     return {
         turn: Number.isInteger(body.turn) ? body.turn : 0,

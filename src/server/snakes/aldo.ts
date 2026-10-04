@@ -1,9 +1,4 @@
 import { StrategyRequest } from '../../types/BTData';
-import { ProjectZ } from './project-z';
-import { KeepAway } from './keep-away';
-import { Rando } from './rando';
-import { Tak } from './tak';
-import { TailChase } from './tail-chase';
 import { BaseSnake } from './base-snake';
 import { ISnake } from './snake-interface';
 import { Color } from '../../types/Color';

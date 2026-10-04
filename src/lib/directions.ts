@@ -37,7 +37,9 @@ export function fallbackMove(data: BTRequest): MoveDirection {
         const { x, y } = nextPosition(head, direction);
         return !isHeadThreat(data, x, y);
     }) ?? candidates[0];
-    if (safe) return safe;
+    if (safe) {
+        return safe;
+    }
     // A trapped snake still needs a valid response. Continue forward if possible.
     return data.you.body[1] ? directionTo(data.you.body[1], head) ?? MoveDirection.UP : MoveDirection.UP;
 }
